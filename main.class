@@ -1,0 +1,3028 @@
+import com.google.common.collect.Lists;
+import io.puharesource.mc.titlemanager.api.TitleObject;
+import io.puharesource.mc.titlemanager.api.TitleObject.TitleType;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Random;
+import java.util.Set;
+import java.util.logging.Logger;
+import javax.imageio.ImageIO;
+import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Difficulty;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Server;
+import org.bukkit.SkullType;
+import org.bukkit.Sound;
+import org.bukkit.World;
+import org.bukkit.World.Environment;
+import org.bukkit.WorldCreator;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.Skull;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
+import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.generator.ChunkGenerator.BiomeGrid;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.map.MapCanvas;
+import org.bukkit.map.MapRenderer;
+import org.bukkit.map.MapView;
+import org.bukkit.map.MinecraftFont;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginDescriptionFile;
+import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.ServicesManager;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.messaging.Messenger;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
+
+public class main
+  extends JavaPlugin
+{
+  static main plugin;
+  Logger logger = Logger.getLogger("Minecraft");
+  Inventory shopInventory;
+  Inventory kitsInventory;
+  Inventory vipKitsInventory;
+  Inventory kitsShopInventory;
+  Inventory bountyInventory;
+  public HashMap<String, PlayerData> playerData = new HashMap();
+  public HashMap<String, List<ItemStack>> purchaseditems = new HashMap();
+  public HashMap<String, String> spectatorSelectionType = new HashMap();
+  public HashMap<String, String> spectatorSelection = new HashMap();
+  Inventory categories = null;
+  HashMap<Integer, Inventory> categorieItems = new HashMap();
+  HashMap<ItemStack, Integer> categoriePurchases = new HashMap();
+  HashMap<ItemStack, Integer> shopPurchases = new HashMap();
+  HashMap<String, Kit> kits = new HashMap();
+  ArrayList<String> defaultKits = new ArrayList();
+  ArrayList<ItemStack> randomItems = new ArrayList();
+  ArrayList<ItemStack> tier2Items = new ArrayList();
+  ArrayList<ItemStack> carepackageItems = new ArrayList();
+  Random random = new Random();
+  Location globallobby = null;
+  Location globaldeathmatch = null;
+  ArrayList<String> commands = new ArrayList();
+  List<String> worldManagerCommands = Arrays.asList(new String[] { "rollback", "backup", "import", "delete", "create", "tp", "list" });
+  ArrayList<String> grace = new ArrayList();
+  ArrayList<String> lobby = new ArrayList();
+  ArrayList<String> game = new ArrayList();
+  ArrayList<String> spectator = new ArrayList();
+  ArrayList<String> bought = new ArrayList();
+  Messages msgs;
+  Config config;
+  listener listen;
+  MySQL mysql;
+  PastebinReporter reporter;
+  BungeeMode bungeeMode;
+  FilesManager filesManager;
+  Economy econ = null;
+  ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
+  ItemStack shop;
+  ItemStack leave;
+  ItemStack ikits;
+  ItemStack bounty;
+  ItemStack vote;
+  ItemStack back;
+  ItemStack sponsor;
+  ItemStack mykits;
+  ItemStack purchase;
+  ItemStack vip;
+  ItemStack tracker = setName(new ItemStack(Material.COMPASS), ChatColor.RED + "Tracking Compass");
+  ItemStack map;
+  String signsprefix = ChatColor.DARK_AQUA + "[SG]";
+  String stats_line2 = ChatColor.AQUA + "Stats";
+  String autojoin_line2 = ChatColor.AQUA + "Auto-Join";
+  ChatColor join_line2_color = ChatColor.BLACK;
+  ChatColor join_line4_color = ChatColor.BLACK;
+  TitleObject title_join;
+  TitleObject title_leave;
+  TitleObject title_start;
+  TitleObject title_win;
+  TitleObject title_achievement;
+  boolean title_starting;
+  boolean title_death;
+  String title_starting_text;
+  String title_death_text;
+  int fadeIn;
+  int fadeOut;
+  int stayTime;
+  boolean availableUpdate;
+  double onlineVersion;
+  boolean U_1_9;
+  Sound NOTE_PLING;
+  Sound FIREWORK_LAUNCH;
+  Sound FIREWORK_TWINKLE;
+  Sound FIREWORK_BLAST;
+  Sound FIREWORK_LARGE_BLAST;
+  Sound EXPLODE;
+  Sound CREEPER_HISS;
+  Sound LEVEL_UP;
+  BukkitTask Updater;
+  
+  public void onEnable()
+  {
+    loadConfig0();this.logger.info("[SurvivalGames] has been enabled!");
+    this.U_1_9 = Bukkit.getBukkitVersion().contains("1.9");
+    loadSounds();
+    plugin = this;
+    this.reporter = new PastebinReporter("599b6112f2b2afebc1d1452fe4f373c6");
+    this.filesManager = new FilesManager(this);
+    this.filesManager.setupAll();
+    this.config = new Config(this);
+    this.config.loadConfig();
+    this.msgs = new Messages(this);
+    this.msgs.loadMessages();
+    this.listen = new listener(this);
+    this.bungeeMode = new BungeeMode(this);
+    Bukkit.getPluginManager().registerEvents(this.listen, this);
+    
+    setupAll();
+    loadArenas();
+    if (this.config.usemysql)
+    {
+      this.mysql = new MySQL(this);
+      this.mysql.setupTable();
+    }
+    for (Player localPlayer : getOnlinePlayers()) {
+      this.playerData.put(localPlayer.getName(), new PlayerData(localPlayer, this));
+    }
+    if (this.config.BungeeMode) {
+      Bukkit.getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+    }
+    if (getConfig().getBoolean("Metrics-Enabled")) {
+      try
+      {
+        new MetricsLite(this).start();
+      }
+      catch (IOException localIOException)
+      {
+        localIOException.printStackTrace();
+      }
+    }
+  }
+  
+  public void onDisable()
+  {
+    this.logger.info("[SurvivalGames] has been disabled!");
+    Object localObject;
+    for (Iterator localIterator1 = Arena.arenaObjects.iterator(); localIterator1.hasNext();)
+    {
+      localObject = (Arena)localIterator1.next();
+      Iterator localIterator3;
+      for (Iterator localIterator2 = ((Arena)localObject).getAllPlayers().iterator(); localIterator2.hasNext(); localIterator3.hasNext())
+      {
+        Player localPlayer1 = (Player)localIterator2.next();
+        localPlayer1.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+        ((PlayerData)this.playerData.get(localPlayer1.getName())).restoreData(localPlayer1);
+        localPlayer1.sendMessage(this.msgs.sgprefix + "Plugin has been reloaded, due to that you have been sended back to the spawn!");
+        localIterator3 = ((Arena)localObject).getSpectators().iterator(); continue;Player localPlayer2 = (Player)localIterator3.next();
+        localPlayer1.showPlayer(localPlayer2);
+      }
+      ((Arena)localObject).rollback(false);
+    }
+    for (localIterator1 = getOnlinePlayers().iterator(); localIterator1.hasNext();)
+    {
+      localObject = (Player)localIterator1.next();
+      ((PlayerData)this.playerData.get(((Player)localObject).getName())).saveStatsIntoFiles((Player)localObject, true);
+    }
+  }
+  
+  public boolean onCommand(final CommandSender paramCommandSender, Command paramCommand, String paramString, String[] paramArrayOfString)
+  {
+    if ((paramString.equalsIgnoreCase("SurvivalGames")) || (paramString.equalsIgnoreCase("sg")))
+    {
+      if (paramArrayOfString.length == 0)
+      {
+        paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ---------" + ChatColor.BLUE + " SurvivalGames " + ChatColor.AQUA + ChatColor.STRIKETHROUGH + "--------- ");
+        paramCommandSender.sendMessage(ChatColor.DARK_RED + ChatColor.STRIKETHROUGH + "->" + ChatColor.DARK_AQUA + " Your Commands");
+        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Main command!");
+        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG List" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Show a list of arenas");
+        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Join" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Join an arena!");
+        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Leave" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Leave an arena");
+        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Stats" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Check your stats");
+        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Lobby" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Teleport to the global lobby");
+        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Info" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Shows some information");
+        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Vote" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Vote for your favorite arena!");
+        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG " + ChatColor.RED + "Admin" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Shows the admin commands");
+        paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ------------------------------- ");
+        return true;
+      }
+      if (!this.commands.contains(paramArrayOfString[0].toLowerCase()))
+      {
+        paramCommandSender.sendMessage(this.msgs.get("UnKnownCommand"));
+        return true;
+      }
+      final Object localObject1;
+      final Object localObject5;
+      final Object localObject11;
+      Object localObject13;
+      final Object localObject7;
+      if (paramArrayOfString[0].equalsIgnoreCase("join"))
+      {
+        if ((paramCommandSender instanceof Player))
+        {
+          localObject1 = (Player)paramCommandSender;
+          if (!((Player)localObject1).hasPermission("sg.join"))
+          {
+            ((Player)localObject1).sendMessage(this.msgs.get("NoPermission"));
+            return true;
+          }
+          if (this.game.contains(((Player)localObject1).getName()))
+          {
+            ((Player)localObject1).sendMessage(this.msgs.get("AlreadyInGame"));
+            return true;
+          }
+          if (paramArrayOfString.length == 1)
+          {
+            ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Usage: /sg join <Arena-Name>");
+            return true;
+          }
+          localObject5 = Arena.valueOf(paramArrayOfString[1]);
+          if (localObject5 == null)
+          {
+            ((Player)localObject1).sendMessage(this.msgs.get("NoArenaFoundWithThatName"));
+            return true;
+          }
+          if (!((Arena)localObject5).ready)
+          {
+            if (((Arena)localObject5).minPlayers < 2)
+            {
+              ((Player)localObject1).sendMessage(this.msgs.get("ArenaHasLessThan2MinimumPlayers"));
+              return true;
+            }
+            if (((Arena)localObject5).state.equals(Arena.ArenaState.DISABLED))
+            {
+              ((Player)localObject1).sendMessage(this.msgs.get("ArenaIsDisabled"));
+              return true;
+            }
+            if (((Arena)localObject5).spawnpoints.isEmpty())
+            {
+              ((Player)localObject1).sendMessage(this.msgs.get("NoSpawnPoints"));
+              return true;
+            }
+            if (((Arena)localObject5).deathmatchLocations.isEmpty())
+            {
+              ((Player)localObject1).sendMessage(this.msgs.get("NoDeathMatchLocation"));
+              return true;
+            }
+            if (((Arena)localObject5).spawnpoints.size() < ((Arena)localObject5).maxPlayers)
+            {
+              ((Player)localObject1).sendMessage(this.msgs.get("NotEnoughSpawnpoints"));
+              return true;
+            }
+          }
+          if (((Arena)localObject5).state.equals(Arena.ArenaState.ROLLBACKING))
+          {
+            ((Player)localObject1).sendMessage(this.msgs.get("ArenaRollbacking"));
+            return true;
+          }
+          if ((((Arena)localObject5).state != Arena.ArenaState.STARTING) && (((Arena)localObject5).state != Arena.ArenaState.WAITING) && (!this.config.CanPlayersJoinAsASpectator))
+          {
+            ((Player)localObject1).sendMessage(this.msgs.get("GameAlreadyStarted"));
+            return true;
+          }
+          if ((((Arena)localObject5).players.size() == ((Arena)localObject5).maxPlayers) && (!this.config.CanPlayersJoinAsASpectator))
+          {
+            ((Player)localObject1).sendMessage(this.msgs.get("ArenaFull"));
+            return true;
+          }
+          this.game.add(((Player)localObject1).getName());
+          this.grace.add(((Player)localObject1).getName());
+          ((PlayerData)this.playerData.get(((Player)localObject1).getName())).savePlayerData((Player)localObject1, (Arena)localObject5);
+          clearPlayerData((Player)localObject1);
+          if (this.title_join != null) {
+            this.title_join.send((Player)localObject1);
+          }
+          Player localPlayer4;
+          if (((!((Arena)localObject5).state.equals(Arena.ArenaState.WAITING)) && (!((Arena)localObject5).state.equals(Arena.ArenaState.STARTING))) || ((((Arena)localObject5).players.size() == ((Arena)localObject5).maxPlayers) && (this.config.CanPlayersJoinAsASpectator)))
+          {
+            this.spectator.add(((Player)localObject1).getName());
+            ((Arena)localObject5).spectators.add(((Player)localObject1).getName());
+            ((Player)localObject1).teleport((Location)((Arena)localObject5).spawnpoints.get(0));
+            for (Player localPlayer3 : ((Arena)localObject5).getSpectators()) {
+              ((Player)localObject1).hidePlayer(localPlayer3);
+            }
+            m = ((Arena)localObject5).spectators.size();
+            i1 = m - 1;
+            for (localObject11 = ((Arena)localObject5).getAllPlayers().iterator(); ((Iterator)localObject11).hasNext();)
+            {
+              localPlayer4 = (Player)((Iterator)localObject11).next();
+              localPlayer4.hidePlayer((Player)localObject1);
+              ((PlayerData)this.playerData.get(localPlayer4.getName())).updateScoreboard(localPlayer4, new String[] { "viewers SP_SPACE " + i1 + " SP_SPACE " + m + " SP_SPACE 1 SP_SPACE " + this.msgs.scoreboardViewers });
+            }
+            ((Player)localObject1).getInventory().addItem(new ItemStack[] { setName(new ItemStack(Material.COMPASS), ChatColor.GREEN + "Player Teleporter"), this.sponsor, this.bounty });
+            ((Player)localObject1).getInventory().setItem(8, this.leave);
+            ((Player)localObject1).setAllowFlight(true);
+            ((Player)localObject1).sendMessage(this.msgs.get("PlayerSpectate"));
+            ((Player)localObject1).updateInventory();
+            return true;
+          }
+          this.lobby.add(((Player)localObject1).getName());
+          
+          ((Player)localObject1).teleport((Location)((Arena)localObject5).availableSpawnpoints.get(0));
+          ((Arena)localObject5).availableSpawnpoints.remove(0);
+          
+          ((Arena)localObject5).players.add(((Player)localObject1).getName());
+          int m = ((Arena)localObject5).players.size();
+          int i1 = m - 1;
+          for (localObject11 = ((Arena)localObject5).getAllPlayers().iterator(); ((Iterator)localObject11).hasNext();)
+          {
+            localPlayer4 = (Player)((Iterator)localObject11).next();
+            ((PlayerData)this.playerData.get(localPlayer4.getName())).updateScoreboard(localPlayer4, new String[] { "players SP_SPACE " + i1 + " SP_SPACE " + m + " SP_SPACE 2 SP_SPACE " + this.msgs.scoreboardPlayers });
+          }
+          ((Player)localObject1).setItemInHand(new ItemStack(Material.AIR));
+          if (this.config.GiveBook) {
+            ((Player)localObject1).getInventory().addItem(new ItemStack[] { this.book });
+          }
+          ((Player)localObject1).getInventory().addItem(new ItemStack[] { this.shop, this.ikits });
+          ((Player)localObject1).getInventory().setItem(8, this.leave);
+          ((Player)localObject1).updateInventory();
+          
+          int i3 = ((Arena)localObject5).minPlayers - m;
+          localObject11 = this.msgs.get("PlayerJoin").replace("%player%", ((Player)localObject1).getName()).replace("%arenasize%", String.valueOf(m)).replace("%arenamax%", String.valueOf(((Arena)localObject5).maxPlayers));
+          for (Object localObject14 = ((Arena)localObject5).getPlayers().iterator(); ((Iterator)localObject14).hasNext(); ((Player)localObject13).sendMessage((String)localObject11)) {
+            localObject13 = (Player)((Iterator)localObject14).next();
+          }
+          if (i3 > 0)
+          {
+            localObject13 = this.msgs.get("PlayersTillStart").replace("%arenasize%", String.valueOf(i3));
+            for (Iterator localIterator5 = ((Arena)localObject5).getPlayers().iterator(); localIterator5.hasNext(); ((Player)localObject14).sendMessage((String)localObject13)) {
+              localObject14 = (Player)localIterator5.next();
+            }
+          }
+          if ((i3 < 1) && (((Arena)localObject5).state != Arena.ArenaState.STARTING))
+          {
+            if (this.config.broadcastArenaStarting) {
+              Bukkit.broadcastMessage(this.msgs.get("BroadcastStart").replace("%arena%", ((Arena)localObject5).name).replace("%seconds%", String.valueOf(((Arena)localObject5).lobbyTime)));
+            }
+            ((Arena)localObject5).startLobbyTimer();
+          }
+          ((Arena)localObject5).updateSignPlayers();
+        }
+        else
+        {
+          paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+        }
+      }
+      else if (paramArrayOfString[0].equalsIgnoreCase("leave"))
+      {
+        if ((paramCommandSender instanceof Player))
+        {
+          localObject1 = (Player)paramCommandSender;
+          localObject5 = (PlayerData)this.playerData.get(((Player)localObject1).getName());
+          localObject7 = ((PlayerData)localObject5).arena;
+          if (localObject7 == null)
+          {
+            ((Player)localObject1).sendMessage(this.msgs.get("NotInArena"));
+            return true;
+          }
+          ((Arena)localObject7).kickPlayer((Player)localObject1, false);
+          ((PlayerData)localObject5).restoreData((Player)localObject1);
+          if (this.title_leave != null) {
+            this.title_leave.send((Player)localObject1);
+          }
+          ((PlayerData)localObject5).warnings = 0;
+          ((Player)localObject1).updateInventory();
+          ((Player)localObject1).setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+          ((Player)localObject1).sendMessage(this.msgs.get("PlayerLeaveSelfMessage"));
+          ((Arena)localObject7).updateSignPlayers();
+        }
+        else
+        {
+          paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+        }
+      }
+      else if (paramArrayOfString[0].equalsIgnoreCase("stats"))
+      {
+        if ((paramCommandSender instanceof Player))
+        {
+          if (((PlayerData)this.playerData.get(paramCommandSender.getName())).hasCooldown((Player)paramCommandSender, "commands")) {
+            return true;
+          }
+          ((PlayerData)this.playerData.get(paramCommandSender.getName())).setCooldown("commands", this.config.commandsCooldown);
+        }
+        else if (paramArrayOfString.length == 1)
+        {
+          paramCommandSender.sendMessage(this.msgs.sgprefix + "Conolse doesn't have stats... you must specify someone to view their stats");
+          return true;
+        }
+        localObject1 = paramArrayOfString.length == 1 ? (Player)paramCommandSender : Bukkit.getPlayer(paramArrayOfString[1]);
+        if (localObject1 != null)
+        {
+          localObject5 = (PlayerData)this.playerData.get(((Player)localObject1).getName());
+          this.filesManager.sendStatsFromInts(paramCommandSender, ((Player)localObject1).getName(), new int[] { ((PlayerData)localObject5).kills, ((PlayerData)localObject5).deaths, ((PlayerData)localObject5).getCoins((Player)localObject1), ((PlayerData)localObject5).wins, ((PlayerData)localObject5).gamesPlayed, ((PlayerData)localObject5).modifier }, ((PlayerData)localObject5).getPlayTime());
+        }
+        else
+        {
+          localObject5 = new String[2];
+          this.filesManager.executeDatabaseUpdate(paramCommandSender, paramArrayOfString[1], new BukkitRunnable()
+          {
+            public void run()
+            {
+              int j;
+              if (localObject5[1] == null)
+              {
+                try
+                {
+                  ResultSet localResultSet = main.this.mysql.getConnection().createStatement().executeQuery("SELECT * FROM " + main.this.mysql.prefix + " WHERE player_name = '" + localObject5[0] + "';");
+                  localResultSet.next();
+                  int i;
+                  if (main.this.econ != null) {
+                    i = (int)main.this.econ.getBalance(localObject5[0]);
+                  } else {
+                    i = localResultSet.getInt("Coins");
+                  }
+                  j = localResultSet.getInt("Modifier");
+                  if (j < 1) {
+                    j = 1;
+                  }
+                  String str2 = localResultSet.getString("Play_Time");
+                  if (str2 == null) {
+                    str2 = "0D-0H-0M-0S";
+                  }
+                  main.this.filesManager.sendStatsFromInts(paramCommandSender, localObject5[0], new int[] { localResultSet.getInt("Kills"), localResultSet.getInt("Deaths"), i, localResultSet.getInt("Wins"), localResultSet.getInt("Gamesplayed"), j }, str2);
+                  localResultSet.close();
+                }
+                catch (SQLException localSQLException)
+                {
+                  localSQLException.printStackTrace();
+                }
+              }
+              else
+              {
+                String str1 = "Players." + localObject5[0];
+                FileConfiguration localFileConfiguration = main.this.filesManager.PlayersConfig;
+                if (main.this.econ != null) {
+                  j = (int)main.this.econ.getBalance(localObject5[1]);
+                } else {
+                  j = localFileConfiguration.getInt(str1 + ".Coins");
+                }
+                int k = localFileConfiguration.getInt(str1 + ".Modifier");
+                if (k < 1) {
+                  k = 1;
+                }
+                String str3 = localFileConfiguration.getString(str1 + ".Play_Time");
+                if (str3 == null) {
+                  str3 = "0D-0H-0M-0S";
+                }
+                main.this.filesManager.sendStatsFromInts(paramCommandSender, localObject5[1], new int[] { localFileConfiguration.getInt(str1 + ".Kills"), localFileConfiguration.getInt(str1 + ".Deaths"), j, localFileConfiguration.getInt(str1 + ".Wins"), localFileConfiguration.getInt(str1 + ".Gamesplayed"), k }, str3);
+              }
+            }
+          }, (String[])localObject5);
+        }
+      }
+      else if (paramArrayOfString[0].equalsIgnoreCase("admin"))
+      {
+        if (paramCommandSender.hasPermission("sg.admin"))
+        {
+          paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ---------" + ChatColor.GOLD + " SurvivalGames " + ChatColor.AQUA + ChatColor.STRIKETHROUGH + "--------- ");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Create" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Create a new Arena!");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Delete" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Deletes an arena!");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Enable | Disable" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Enable or Disable an arena");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Start | Stop" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Change an arena state");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Addspawn | Removespawn" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Add | Remove spawnpoints from an arena");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Adddeathmatch | Removedeathmatch" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Add | Remove a deathmatch spawnpoint");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Reload" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Reloads the config files!");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Coins" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Change a player coins");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Kit" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Manage things related to kits");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Setgloballobby" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Sets the global lobby location");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Setglobaldeathmatch" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Sets the global deathmatch location");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Setmodifier" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Change a player coins modifier");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Pastebin" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Upload some information to pastebin");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Edit" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Edit some arena information");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG Reset" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Reset a player stats");
+          paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG WorldManager" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Shows a list of World management commands");
+          paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ------------------------------- ");
+        }
+        else
+        {
+          paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+        }
+      }
+      else
+      {
+        final int i2;
+        final int i4;
+        if (paramArrayOfString[0].equalsIgnoreCase("create"))
+        {
+          if (paramCommandSender.hasPermission("sg.create"))
+          {
+            if ((paramCommandSender instanceof Player))
+            {
+              localObject1 = (Player)paramCommandSender;
+              if (paramArrayOfString.length < 4)
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Usage: /sg create <Arena-Name> <Min-Players> <Max-Players>");
+                return true;
+              }
+              localObject5 = paramArrayOfString[1];
+              if (Arena.valueOf((String)localObject5) != null)
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "An arena with this name already exists!");
+                return true;
+              }
+              if (!isNumber(paramArrayOfString[2]))
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Min players must be a number!");
+                return true;
+              }
+              if (Integer.valueOf(paramArrayOfString[2]).intValue() < 2)
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "The arena must have at least 2 minimum players!");
+                return true;
+              }
+              if (!isNumber(paramArrayOfString[3]))
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Max players must be a number!");
+                return true;
+              }
+              localObject7 = ((Player)localObject1).getWorld().getName();
+              for (Arena localArena2 : Arena.arenaObjects) {
+                if (localArena2.worldName.equalsIgnoreCase((String)localObject7))
+                {
+                  ((Player)localObject1).sendMessage(this.msgs.sgprefix + "The arena " + ChatColor.AQUA + localArena2.name + ChatColor.GOLD + " is using this world!");
+                  return true;
+                }
+              }
+              i2 = Integer.valueOf(paramArrayOfString[2]).intValue();
+              i4 = Integer.valueOf(paramArrayOfString[3]).intValue();
+              
+              localObject11 = new File(getDataFolder() + "/arenas/" + (String)localObject5, "data.yml");
+              localObject13 = YamlConfiguration.loadConfiguration((File)localObject11);
+              
+              ((FileConfiguration)localObject13).set("enabled", Boolean.valueOf(true));
+              ((FileConfiguration)localObject13).set("world", localObject7);
+              ((FileConfiguration)localObject13).set("minPlayers", Integer.valueOf(i2));
+              ((FileConfiguration)localObject13).set("maxPlayers", Integer.valueOf(i4));
+              ((FileConfiguration)localObject13).set("lobby-time", Integer.valueOf(30));
+              ((FileConfiguration)localObject13).set("grace-time", Integer.valueOf(30));
+              ((FileConfiguration)localObject13).set("deathmatch-grace-time", Integer.valueOf(20));
+              ((FileConfiguration)localObject13).set("game-time", Integer.valueOf(1200));
+              ((FileConfiguration)localObject13).set("warn-every-seconds", Integer.valueOf(60));
+              ((FileConfiguration)localObject13).set("time-till-deathmatch-start-after-announce", Integer.valueOf(30));
+              ((FileConfiguration)localObject13).set("deathmatch-time", Integer.valueOf(120));
+              ((FileConfiguration)localObject13).set("chests-refill-at", Integer.valueOf(600));
+              ((FileConfiguration)localObject13).set("minimum-chest-items", Integer.valueOf(3));
+              ((FileConfiguration)localObject13).set("max-chest-items", Integer.valueOf(5));
+              ((FileConfiguration)localObject13).set("minimum-chest-tier2-items", Integer.valueOf(2));
+              ((FileConfiguration)localObject13).set("max-chest-tier2-items", Integer.valueOf(4));
+              ((FileConfiguration)localObject13).set("playerstilldeathmatch", Integer.valueOf(3));
+              try
+              {
+                ((FileConfiguration)localObject13).save((File)localObject11);
+              }
+              catch (IOException localIOException)
+              {
+                localIOException.printStackTrace();
+              }
+              ((Player)localObject1).sendMessage(this.msgs.sgprefix + ChatColor.GREEN + "Arena data has been saved into the file!");
+              
+              new BukkitRunnable()
+              {
+                public void run()
+                {
+                  localObject1.sendMessage(main.this.msgs.sgprefix + "Creating a backup of the arena world...");
+                  main.this.filesManager.copyWorld(localObject1.getWorld().getWorldFolder(), new File(main.this.getDataFolder() + "/arenas/" + localObject5, localObject7 + "_Backup"));
+                  new Arena(localObject5, i2, i4, localObject1.getWorld().getName(), Arena.ArenaState.WAITING, new ArrayList(), 1200, 30, 30, 60, 600, 3, 5, new ArrayList(), 30, 120, 3, null, 20, 2, 4, main.plugin, localObject11);
+                  localObject1.sendMessage(main.this.msgs.sgprefix + ChatColor.GREEN + "Success! " + ChatColor.GOLD + "Arena has been created");
+                }
+              }.runTaskAsynchronously(this);
+            }
+            else
+            {
+              paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+            }
+          }
+          else {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("delete"))
+        {
+          if (paramCommandSender.hasPermission("sg.delete"))
+          {
+            if ((paramCommandSender instanceof Player))
+            {
+              localObject1 = (Player)paramCommandSender;
+              if (paramArrayOfString.length == 1)
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Usage: /sg delete <Arena-Name>");
+                return true;
+              }
+              localObject5 = Arena.valueOf(paramArrayOfString[1]);
+              if (localObject5 == null)
+              {
+                ((Player)localObject1).sendMessage(this.msgs.get("NoArenaFoundWithThatName"));
+                return true;
+              }
+              ((Arena)localObject5).stop(false, true);
+              Arena.arenaObjects.remove(localObject5);
+              new BukkitRunnable()
+              {
+                public void run()
+                {
+                  main.this.filesManager.deleteWorld(new File(main.this.getDataFolder() + "/arenas", localObject5.name));
+                  localObject1.sendMessage(main.this.msgs.sgprefix + "Successfully deleted that arena!");
+                }
+              }.runTaskAsynchronously(this);
+            }
+            else
+            {
+              paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+            }
+          }
+          else {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("list"))
+        {
+          if ((paramCommandSender instanceof Player))
+          {
+            if (((PlayerData)this.playerData.get(paramCommandSender.getName())).hasCooldown((Player)paramCommandSender, "commands")) {
+              return true;
+            }
+            ((PlayerData)this.playerData.get(paramCommandSender.getName())).setCooldown("commands", this.config.commandsCooldown);
+          }
+          if (this.config.BungeeMode)
+          {
+            paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ---------" + ChatColor.GOLD + " Players " + ChatColor.AQUA + ChatColor.STRIKETHROUGH + "--------- ");
+            if ((this.bungeeMode.selectedArena != null) && (this.bungeeMode.selectedArena.players.size() != 0)) {
+              paramCommandSender.sendMessage(ChatColor.GOLD + "There are: " + ChatColor.GREEN + this.bungeeMode.selectedArena.players.size() + ChatColor.GOLD + " player(s) alive!");
+            } else {
+              paramCommandSender.sendMessage(ChatColor.GOLD + "There are: " + ChatColor.GREEN + getOnlinePlayers().size() + ChatColor.GOLD + " player(s) online");
+            }
+            for (localObject5 = getOnlinePlayers().iterator(); ((Iterator)localObject5).hasNext();)
+            {
+              localObject1 = (Player)((Iterator)localObject5).next();
+              localObject7 = ChatColor.GREEN;
+              if ((this.bungeeMode.selectedArena != null) && (this.bungeeMode.selectedArena.spectators.contains(((Player)localObject1).getName()))) {
+                localObject7 = ChatColor.GRAY;
+              }
+              paramCommandSender.sendMessage(ChatColor.AQUA + "- " + localObject7 + ((Player)localObject1).getName());
+            }
+            paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " -------------------------- ");
+          }
+          else
+          {
+            paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ---------" + ChatColor.GOLD + " SurvivalGames " + ChatColor.AQUA + ChatColor.STRIKETHROUGH + "--------- ");
+            if (Arena.arenaObjects.size() > 0) {
+              for (localObject5 = Arena.arenaObjects.iterator(); ((Iterator)localObject5).hasNext();)
+              {
+                localObject1 = (Arena)((Iterator)localObject5).next();
+                paramCommandSender.sendMessage(ChatColor.AQUA + " - " + ChatColor.GOLD + ((Arena)localObject1).name + ChatColor.DARK_AQUA + " -> " + ((Arena)localObject1).state.getText() + ChatColor.GOLD + " (" + ChatColor.AQUA + ((Arena)localObject1).players.size() + ChatColor.GOLD + "/" + ChatColor.AQUA + ((Arena)localObject1).maxPlayers + ChatColor.GOLD + ")!");
+              }
+            } else {
+              paramCommandSender.sendMessage(ChatColor.AQUA + " - " + ChatColor.GOLD + "Couldn't find any available arenas!");
+            }
+            paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ------------------------------- ");
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("enable"))
+        {
+          if (paramCommandSender.hasPermission("sg.enable"))
+          {
+            if (paramArrayOfString.length == 1)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg enable <Arena-Name> | All");
+              return true;
+            }
+            localObject1 = paramArrayOfString[1];
+            if (((String)localObject1).equalsIgnoreCase("all"))
+            {
+              if (Arena.arenaObjects.isEmpty())
+              {
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "Couldn't find any arenas to enable!");
+                return true;
+              }
+              for (localObject7 = Arena.arenaObjects.iterator(); ((Iterator)localObject7).hasNext();)
+              {
+                localObject5 = (Arena)((Iterator)localObject7).next();
+                if (((Arena)localObject5).state == Arena.ArenaState.DISABLED)
+                {
+                  ((Arena)localObject5).editor.set("enabled", Boolean.valueOf(true));
+                  ((Arena)localObject5).saveFile();
+                  ((Arena)localObject5).state = Arena.ArenaState.WAITING;
+                  ((Arena)localObject5).updateSignState();
+                  ((Arena)localObject5).updateReady();
+                  paramCommandSender.sendMessage(this.msgs.sgprefix + "You have " + ChatColor.GREEN + "enabled" + ChatColor.GOLD + " the arena: " + ChatColor.AQUA + ((Arena)localObject5).name);
+                }
+              }
+              return true;
+            }
+            localObject5 = Arena.valueOf((String)localObject1);
+            if (localObject5 == null)
+            {
+              paramCommandSender.sendMessage(this.msgs.get("NoArenaFoundWithThatName"));
+              return true;
+            }
+            if (((Arena)localObject5).state != Arena.ArenaState.DISABLED)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "That arena is already enabled!");
+              return true;
+            }
+            ((Arena)localObject5).state = Arena.ArenaState.WAITING;
+            ((Arena)localObject5).editor.set("enabled", Boolean.valueOf(true));
+            ((Arena)localObject5).saveFile();
+            ((Arena)localObject5).updateReady();
+            ((Arena)localObject5).updateSignState();
+            paramCommandSender.sendMessage(this.msgs.sgprefix + "You have " + ChatColor.GREEN + "enabled" + ChatColor.GOLD + " the arena: " + ChatColor.AQUA + ((Arena)localObject5).name);
+          }
+          else
+          {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("disable"))
+        {
+          if (paramCommandSender.hasPermission("sg.disable"))
+          {
+            if (paramArrayOfString.length == 1)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg disable <Arena-Name>");
+              return true;
+            }
+            localObject1 = paramArrayOfString[1];
+            if (((String)localObject1).equalsIgnoreCase("all"))
+            {
+              if (Arena.arenaObjects.isEmpty())
+              {
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "Couldn't find any arenas to disable!");
+                return true;
+              }
+              for (localObject7 = Arena.arenaObjects.iterator(); ((Iterator)localObject7).hasNext();)
+              {
+                localObject5 = (Arena)((Iterator)localObject7).next();
+                if (((Arena)localObject5).state != Arena.ArenaState.DISABLED)
+                {
+                  ((Arena)localObject5).stop(true, true);
+                  ((Arena)localObject5).updateReady();
+                  ((Arena)localObject5).editor.set("enabled", Boolean.valueOf(false));
+                  ((Arena)localObject5).saveFile();
+                  ((Arena)localObject5).state = Arena.ArenaState.DISABLED;
+                  paramCommandSender.sendMessage(this.msgs.sgprefix + "You have " + ChatColor.RED + "disabled" + ChatColor.GOLD + " the arena: " + ChatColor.AQUA + ((Arena)localObject5).name);
+                }
+              }
+              return true;
+            }
+            localObject5 = Arena.valueOf((String)localObject1);
+            if (localObject5 == null)
+            {
+              paramCommandSender.sendMessage(this.msgs.get("NoArenaFoundWithThatName"));
+              return true;
+            }
+            if (((Arena)localObject5).state == Arena.ArenaState.DISABLED)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "That arena is already disabled!");
+              return true;
+            }
+            ((Arena)localObject5).state = Arena.ArenaState.DISABLED;
+            ((Arena)localObject5).stop(true, true);
+            ((Arena)localObject5).updateReady();
+            ((Arena)localObject5).editor.set("enabled", Boolean.valueOf(false));
+            ((Arena)localObject5).saveFile();
+            paramCommandSender.sendMessage(this.msgs.sgprefix + "You have " + ChatColor.RED + "disabled" + ChatColor.GOLD + " the arena: " + ChatColor.AQUA + ((Arena)localObject5).name);
+          }
+          else
+          {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("addspawn"))
+        {
+          if (paramCommandSender.hasPermission("sg.addspawn"))
+          {
+            if ((paramCommandSender instanceof Player))
+            {
+              localObject1 = (Player)paramCommandSender;
+              if (paramArrayOfString.length == 1)
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Usage: /sg addspawn <Arena-Name>");
+                return true;
+              }
+              localObject5 = Arena.valueOf(paramArrayOfString[1]);
+              if (localObject5 == null)
+              {
+                ((Player)localObject1).sendMessage(this.msgs.get("NoArenaFoundWithThatName"));
+                return true;
+              }
+              if (!((Arena)localObject5).worldName.equalsIgnoreCase(((Player)localObject1).getWorld().getName()))
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Spawnpoints must be in the same arena world");
+                return true;
+              }
+              localObject7 = ((Player)localObject1).getLocation();
+              i2 = ((Location)localObject7).getBlockX();i4 = ((Location)localObject7).getBlockY();int i6 = ((Location)localObject7).getBlockZ();
+              float f1 = ((Location)localObject7).getYaw();
+              float f2 = ((Location)localObject7).getPitch();
+              int i12 = 0;
+              if (((Arena)localObject5).editor.getConfigurationSection("spawnpoints") == null) {
+                i12++;
+              } else {
+                i12 = ((Arena)localObject5).editor.getConfigurationSection("spawnpoints").getKeys(false).size() + 1;
+              }
+              ((Arena)localObject5).editor.set("spawnpoints." + i12 + ".x", Integer.valueOf(i2));
+              ((Arena)localObject5).editor.set("spawnpoints." + i12 + ".y", Integer.valueOf(i4));
+              ((Arena)localObject5).editor.set("spawnpoints." + i12 + ".z", Integer.valueOf(i6));
+              ((Arena)localObject5).editor.set("spawnpoints." + i12 + ".yaw", Float.valueOf(f1));
+              ((Arena)localObject5).editor.set("spawnpoints." + i12 + ".pitch", Float.valueOf(f2));
+              ((Arena)localObject5).saveFile();
+              ((Arena)localObject5).spawnpoints.add(localObject7);
+              ((Arena)localObject5).availableSpawnpoints.add(localObject7);
+              ((Arena)localObject5).updateReady();
+              ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Successfully add the spawn number " + ChatColor.AQUA + i12 + ChatColor.GOLD + "!");
+            }
+            else
+            {
+              paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+            }
+          }
+          else {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("Removespawn"))
+        {
+          if (paramCommandSender.hasPermission("sg.removespawn"))
+          {
+            if (paramArrayOfString.length < 2)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg removespawn <Arena>");
+              return true;
+            }
+            localObject1 = Arena.valueOf(paramArrayOfString[1]);
+            if (localObject1 == null)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Couldn't find any arena with that name!");
+              return true;
+            }
+            if (((Arena)localObject1).spawnpoints.isEmpty())
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "That arena has no spawnpoints!");
+              return true;
+            }
+            int i = ((Arena)localObject1).spawnpoints.size();
+            localObject7 = (Location)((Arena)localObject1).spawnpoints.get(i - 1);
+            ((Arena)localObject1).spawnpoints.remove(localObject7);
+            ((Arena)localObject1).availableSpawnpoints.remove(localObject7);
+            ((Arena)localObject1).editor.set("spawnpoints." + i, null);
+            ((Arena)localObject1).saveFile();
+            if (((Arena)localObject1).spawnpoints.isEmpty()) {
+              ((Arena)localObject1).updateReady();
+            }
+            paramCommandSender.sendMessage(this.msgs.sgprefix + "Removed the latest spawnpoint from the arena " + ChatColor.AQUA + ((Arena)localObject1).name + ChatColor.GOLD + " and now there are " + ChatColor.AQUA + ((Arena)localObject1).spawnpoints.size() + ChatColor.GOLD + " spawnpoints!");
+          }
+          else
+          {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("Adddeathmatch"))
+        {
+          if ((paramCommandSender instanceof Player))
+          {
+            localObject1 = (Player)paramCommandSender;
+            if (paramCommandSender.hasPermission("sg.adddeathmatch"))
+            {
+              if (paramArrayOfString.length == 1)
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Usage: /sg adddeathmatch <Arena-Name>");
+                return true;
+              }
+              Arena localArena1 = Arena.valueOf(paramArrayOfString[1]);
+              if (localArena1 == null)
+              {
+                ((Player)localObject1).sendMessage(this.msgs.get("NoArenaFoundWithThatName"));
+                return true;
+              }
+              if (!((Player)localObject1).getWorld().getName().equalsIgnoreCase(localArena1.worldName))
+              {
+                ((Player)localObject1).sendMessage(this.msgs.sgprefix + "Deathmatch spawnpoints must be in the arena world!");
+                return true;
+              }
+              localObject7 = ((Player)localObject1).getLocation();
+              i2 = localArena1.editor.getConfigurationSection("deathmatch.spawnpoints") != null ? localArena1.editor.getConfigurationSection("deathmatch.spawnpoints").getKeys(false).size() + 1 : 1;
+              localArena1.editor.set("deathmatch.spawnpoints." + i2 + ".x", Integer.valueOf(((Location)localObject7).getBlockX()));
+              localArena1.editor.set("deathmatch.spawnpoints." + i2 + ".y", Integer.valueOf(((Location)localObject7).getBlockY()));
+              localArena1.editor.set("deathmatch.spawnpoints." + i2 + ".z", Integer.valueOf(((Location)localObject7).getBlockZ()));
+              localArena1.editor.set("deathmatch.spawnpoints." + i2 + ".yaw", Float.valueOf(((Location)localObject7).getYaw()));
+              localArena1.editor.set("deathmatch.spawnpoints." + i2 + ".pitch", Float.valueOf(((Location)localObject7).getPitch()));
+              localArena1.saveFile();
+              localArena1.deathmatchLocations.add(localObject7);
+              localArena1.updateReady();
+              ((Player)localObject1).sendMessage(this.msgs.sgprefix + "You have add a deathmatch location at: " + ChatColor.AQUA + ((Location)localObject7).getBlockX() + ChatColor.GOLD + ", " + ChatColor.AQUA + ((Location)localObject7).getBlockY() + ChatColor.GOLD + ", " + ChatColor.AQUA + ((Location)localObject7).getBlockZ());
+            }
+            else
+            {
+              ((Player)localObject1).sendMessage(this.msgs.get("NoPermission"));
+            }
+          }
+          else
+          {
+            paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("removedeathmatch"))
+        {
+          if (paramCommandSender.hasPermission("sg.removedeathmatch"))
+          {
+            if (paramArrayOfString.length < 2)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg removedeathmatch <Arena>");
+              return true;
+            }
+            localObject1 = Arena.valueOf(paramArrayOfString[1]);
+            if (localObject1 == null)
+            {
+              paramCommandSender.sendMessage(this.msgs.get("NoArenaFoundWithThatName"));
+              return true;
+            }
+            if (((Arena)localObject1).deathmatchLocations.isEmpty())
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "That arena has no deathmatch spawnpoints!");
+              return true;
+            }
+            int j = ((Arena)localObject1).deathmatchLocations.size();
+            ((Arena)localObject1).deathmatchLocations.remove(j - 1);
+            if (((Arena)localObject1).deathmatchLocations.isEmpty()) {
+              ((Arena)localObject1).updateReady();
+            }
+            ((Arena)localObject1).editor.set("deathmatch.spawnpoints." + j, null);
+            ((Arena)localObject1).saveFile();
+            paramCommandSender.sendMessage(this.msgs.sgprefix + "Removed the latest deathmatch spawnpoint from the arena " + ChatColor.AQUA + ((Arena)localObject1).name + ChatColor.GOLD + " and now there are " + ChatColor.AQUA + ((Arena)localObject1).deathmatchLocations.size() + ChatColor.GOLD + " deathmatch spawnpoints!");
+          }
+          else
+          {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+      }
+      final Object localObject9;
+      Iterator localIterator3;
+      Object localObject12;
+      if (paramArrayOfString[0].equalsIgnoreCase("reload"))
+      {
+        if (paramCommandSender.hasPermission("sg.reload"))
+        {
+          long l1 = System.currentTimeMillis();
+          
+          this.filesManager.setupAll();
+          this.config.loadConfig();
+          this.msgs.loadMessages();
+          setupAll();
+          loadArenas();
+          if (this.config.usemysql)
+          {
+            if (this.mysql == null) {
+              this.mysql = new MySQL(this);
+            }
+            this.mysql.setupTable();
+          }
+          for (localObject9 = getOnlinePlayers().iterator(); ((Iterator)localObject9).hasNext();)
+          {
+            localObject7 = (Player)((Iterator)localObject9).next();
+            PlayerData localPlayerData = (PlayerData)this.playerData.get(((Player)localObject7).getName());
+            for (localIterator3 = this.defaultKits.iterator(); localIterator3.hasNext();)
+            {
+              localObject12 = (String)localIterator3.next();
+              if (!localPlayerData.kits.contains(localObject12)) {
+                localPlayerData.kits.add(localObject12);
+              }
+            }
+            localPlayerData.createOwnedKits();
+            localPlayerData.saveStatsIntoFiles((Player)localObject7, false);
+          }
+          long l5 = System.currentTimeMillis() - l1;
+          paramCommandSender.sendMessage(this.msgs.sgprefix + "Reload has been completed! took " + ChatColor.AQUA + l5 + ChatColor.GOLD + "ms (" + ChatColor.LIGHT_PURPLE + l5 / 1000L + ChatColor.GOLD + "s)!");
+        }
+        else
+        {
+          paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+        }
+      }
+      else
+      {
+        final Object localObject2;
+        if (paramArrayOfString[0].equalsIgnoreCase("coins"))
+        {
+          if (paramCommandSender.hasPermission("sg.coins"))
+          {
+            if (paramArrayOfString.length < 4)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg coins Add|Remove|Set <Player> <Amount>");
+              return true;
+            }
+            localObject2 = paramArrayOfString[1];
+            if ((!((String)localObject2).equalsIgnoreCase("add")) && (!((String)localObject2).equalsIgnoreCase("remove")) && (!((String)localObject2).equalsIgnoreCase("set")))
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg coins Add|Remove|Set <Player> <Amount>");
+              return true;
+            }
+            if (!isNumber(paramArrayOfString[3]))
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Amount must be a number!");
+              return true;
+            }
+            Player localPlayer1 = Bukkit.getPlayer(paramArrayOfString[2]);
+            final int n = Integer.valueOf(paramArrayOfString[3]).intValue();
+            if (localPlayer1 == null)
+            {
+              localObject9 = new String[2];
+              this.filesManager.executeDatabaseUpdate(paramCommandSender, paramArrayOfString[2], new BukkitRunnable()
+              {
+                public void run()
+                {
+                  if (localObject9[1] == null)
+                  {
+                    try
+                    {
+                      ResultSet localResultSet = main.this.mysql.getConnection().createStatement().executeQuery("SELECT Coins FROM " + main.this.mysql.prefix + " WHERE player_name = '" + localObject9[0] + "';");
+                      localResultSet.next();
+                      int i = localResultSet.getInt("Coins");
+                      localResultSet.close();
+                      if (localObject2.equalsIgnoreCase("add")) {
+                        i += n;
+                      } else if (localObject2.equalsIgnoreCase("remove")) {
+                        i -= n;
+                      } else if (localObject2.equalsIgnoreCase("set")) {
+                        i = n;
+                      }
+                      main.this.mysql.getConnection().prepareStatement("UPDATE " + main.this.mysql.prefix + " SET Coins=" + i + " WHERE player_name= '" + localObject9[0] + "';").executeUpdate();
+                      paramCommandSender.sendMessage(main.this.msgs.sgprefix + "Player " + ChatColor.AQUA + localObject9[0] + ChatColor.GOLD + " coins has been updated!");
+                    }
+                    catch (SQLException localSQLException)
+                    {
+                      localSQLException.printStackTrace();
+                    }
+                  }
+                  else
+                  {
+                    FileConfiguration localFileConfiguration = main.this.filesManager.PlayersConfig;
+                    if (localObject2.equalsIgnoreCase("add")) {
+                      localFileConfiguration.set("Players." + localObject9[0] + ".Coins", Integer.valueOf(localFileConfiguration.getInt("Players." + localObject9[0] + ".Coins") + n));
+                    } else if (localObject2.equalsIgnoreCase("remove")) {
+                      localFileConfiguration.set("Players." + localObject9[0] + ".Coins", Integer.valueOf(localFileConfiguration.getInt("Players." + localObject9[0] + ".Coins") - n));
+                    } else if (localObject2.equalsIgnoreCase("set")) {
+                      localFileConfiguration.set("Players." + localObject9[0] + ".Coins", Integer.valueOf(n));
+                    }
+                    main.this.filesManager.savePlayersConfig();
+                    paramCommandSender.sendMessage(main.this.msgs.sgprefix + "Player " + ChatColor.AQUA + localObject9[1] + ChatColor.GOLD + " coins has been updated!");
+                  }
+                }
+              }, (String[])localObject9);
+            }
+            else
+            {
+              localObject9 = (PlayerData)this.playerData.get(localPlayer1.getName());
+              ((PlayerData)localObject9).joined = true;
+              if (((String)localObject2).equalsIgnoreCase("add"))
+              {
+                ((PlayerData)localObject9).addCoins(localPlayer1, n, true);
+                localPlayer1.sendMessage(this.msgs.sgprefix + "You have gained " + ChatColor.AQUA + n + ChatColor.GOLD + " coins!");
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "Added " + ChatColor.AQUA + n + ChatColor.GOLD + " coins to the player " + ChatColor.AQUA + localPlayer1.getName());
+              }
+              else if (((String)localObject2).equalsIgnoreCase("remove"))
+              {
+                ((PlayerData)localObject9).removeCoins(localPlayer1, n, true);
+                localPlayer1.sendMessage(this.msgs.sgprefix + "You have lost " + ChatColor.AQUA + n + ChatColor.GOLD + " coins!");
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "Removed " + ChatColor.AQUA + n + ChatColor.GOLD + " coins from the player " + ChatColor.AQUA + localPlayer1.getName());
+              }
+              else if (((String)localObject2).equalsIgnoreCase("set"))
+              {
+                ((PlayerData)localObject9).setCoins(localPlayer1, n, true);
+                localPlayer1.sendMessage(this.msgs.sgprefix + "Your coins have been set to " + ChatColor.AQUA + n + ChatColor.GOLD + "!");
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "Player " + ChatColor.AQUA + localPlayer1.getName() + ChatColor.GOLD + " coins has been set to " + ChatColor.AQUA + n + ChatColor.GOLD + "!");
+              }
+            }
+          }
+          else
+          {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("start"))
+        {
+          if (paramCommandSender.hasPermission("sg.start"))
+          {
+            if (this.config.BungeeMode)
+            {
+              if ((this.bungeeMode.selectedArena == null) && (this.bungeeMode.starting != null)) {
+                this.bungeeMode.Seconds = (this.config.BungeeModeLockVotesAt + 1);
+              } else if ((this.bungeeMode.selectedArena != null) && (this.bungeeMode.selectedArena.state.equals(Arena.ArenaState.STARTING))) {
+                this.bungeeMode.selectedArena.start();
+              } else {
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "The game may not start right now!");
+              }
+            }
+            else
+            {
+              localObject2 = null;
+              if (paramArrayOfString.length == 1)
+              {
+                if ((paramCommandSender instanceof Player))
+                {
+                  localObject2 = ((PlayerData)this.playerData.get(((Player)paramCommandSender).getName())).arena;
+                  if (localObject2 == null)
+                  {
+                    paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg start <Arena>");
+                    return true;
+                  }
+                }
+                else
+                {
+                  paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg start <Arena>");
+                  return true;
+                }
+              }
+              else {
+                localObject2 = Arena.valueOf(paramArrayOfString[1]);
+              }
+              if (localObject2 == null)
+              {
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "Couldn't find an arena with that name!");
+                return true;
+              }
+              if ((((Arena)localObject2).state != Arena.ArenaState.WAITING) && (((Arena)localObject2).state != Arena.ArenaState.STARTING))
+              {
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "That arena is already in game!");
+                return true;
+              }
+              if (((Arena)localObject2).players.size() < 2)
+              {
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "The arena must have at least 2 players!");
+                return true;
+              }
+              ((Arena)localObject2).start();
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Forced the arena " + ChatColor.AQUA + ((Arena)localObject2).name + ChatColor.GOLD + " to start!");
+            }
+          }
+          else {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+        else if (paramArrayOfString[0].equalsIgnoreCase("stop"))
+        {
+          if (paramCommandSender.hasPermission("sg.stop"))
+          {
+            if (paramArrayOfString.length == 1)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg stop <Arena>");
+              return true;
+            }
+            localObject2 = Arena.valueOf(paramArrayOfString[1]);
+            if (localObject2 == null)
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "Couldn't find an arena with that name!");
+              return true;
+            }
+            if ((((Arena)localObject2).state.equals(Arena.ArenaState.STARTING)) || (((Arena)localObject2).state.equals(Arena.ArenaState.WAITING)))
+            {
+              paramCommandSender.sendMessage(this.msgs.sgprefix + "That arena is not in a game!");
+              return true;
+            }
+            ((Arena)localObject2).stop(true, true);
+            paramCommandSender.sendMessage(this.msgs.sgprefix + "Stopped the arena " + ChatColor.AQUA + ((Arena)localObject2).name + ChatColor.GOLD + "!");
+          }
+          else
+          {
+            paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+          }
+        }
+        else
+        {
+          final Object localObject8;
+          if (paramArrayOfString[0].equalsIgnoreCase("setmodifier"))
+          {
+            if (paramCommandSender.hasPermission("sg.setmodifier"))
+            {
+              if (paramArrayOfString.length < 3)
+              {
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg setmodifier <Player> <Modifier>");
+                return true;
+              }
+              if (!isNumber(paramArrayOfString[2]))
+              {
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "Modifier must be a number!");
+                return true;
+              }
+              localObject2 = Bukkit.getPlayer(paramArrayOfString[1]);
+              final int k = Integer.valueOf(paramArrayOfString[2]).intValue();
+              if (localObject2 != null)
+              {
+                ((PlayerData)this.playerData.get(((Player)localObject2).getName())).modifier = k;
+                ((PlayerData)this.playerData.get(((Player)localObject2).getName())).joined = true;
+                ((Player)localObject2).sendMessage(this.msgs.get("PlayerModifierChange"));
+                paramCommandSender.sendMessage(this.msgs.sgprefix + "You have set " + ChatColor.AQUA + ((Player)localObject2).getName() + ChatColor.GOLD + " modifier to " + paramArrayOfString[2]);
+              }
+              else
+              {
+                localObject8 = new String[2];
+                this.filesManager.executeDatabaseUpdate(paramCommandSender, paramArrayOfString[1], new BukkitRunnable()
+                {
+                  public void run()
+                  {
+                    if (localObject8[1] == null)
+                    {
+                      try
+                      {
+                        main.this.mysql.getConnection().prepareStatement("UPDATE " + main.this.mysql.prefix + " SET Modifier=" + k + " WHERE player_name= '" + localObject8[0] + "';").executeUpdate();
+                        paramCommandSender.sendMessage(main.this.msgs.sgprefix + "Player " + ChatColor.AQUA + localObject8[0] + ChatColor.GOLD + " modifier has been updated!");
+                      }
+                      catch (SQLException localSQLException)
+                      {
+                        localSQLException.printStackTrace();
+                      }
+                    }
+                    else
+                    {
+                      main.this.filesManager.PlayersConfig.set("Players." + localObject8[0] + ".Modifier", Integer.valueOf(k));
+                      main.this.filesManager.savePlayersConfig();
+                      paramCommandSender.sendMessage(main.this.msgs.sgprefix + "Player " + ChatColor.AQUA + localObject8[1] + ChatColor.GOLD + " modifier has been updated!");
+                    }
+                  }
+                }, (String[])localObject8);
+              }
+            }
+            else
+            {
+              paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+            }
+          }
+          else
+          {
+            Object localObject6;
+            if (paramArrayOfString[0].equalsIgnoreCase("setgloballobby"))
+            {
+              if ((paramCommandSender instanceof Player))
+              {
+                localObject2 = (Player)paramCommandSender;
+                if (((Player)localObject2).hasPermission("sg.setgloballobby"))
+                {
+                  localObject6 = ((Player)localObject2).getLocation();
+                  for (localObject9 = Arena.arenaObjects.iterator(); ((Iterator)localObject9).hasNext();)
+                  {
+                    localObject8 = (Arena)((Iterator)localObject9).next();
+                    if (((Arena)localObject8).worldName.equalsIgnoreCase(((Location)localObject6).getWorld().getName()))
+                    {
+                      ((Player)localObject2).sendMessage(this.msgs.sgprefix + "The arena " + ChatColor.AQUA + ((Arena)localObject8).name + ChatColor.GOLD + " is using this world!");
+                      return true;
+                    }
+                  }
+                  getConfig().set("Global-Lobby.world", ((Location)localObject6).getWorld().getName());
+                  getConfig().set("Global-Lobby.x", Integer.valueOf(((Location)localObject6).getBlockX()));
+                  getConfig().set("Global-Lobby.y", Integer.valueOf(((Location)localObject6).getBlockY()));
+                  getConfig().set("Global-Lobby.z", Integer.valueOf(((Location)localObject6).getBlockZ()));
+                  getConfig().set("Global-Lobby.yaw", Float.valueOf(((Location)localObject6).getYaw()));
+                  getConfig().set("Global-Lobby.pitch", Float.valueOf(((Location)localObject6).getPitch()));
+                  saveConfig();
+                  this.globallobby = ((Location)localObject6);
+                  ((Player)localObject2).sendMessage(this.msgs.sgprefix + "Global lobby location has been set!");
+                }
+                else
+                {
+                  ((Player)localObject2).sendMessage(this.msgs.get("NoPermission"));
+                }
+              }
+              else
+              {
+                paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+              }
+            }
+            else if (paramArrayOfString[0].equalsIgnoreCase("lobby"))
+            {
+              if ((paramCommandSender instanceof Player))
+              {
+                localObject2 = (Player)paramCommandSender;
+                if (this.game.contains(((Player)localObject2).getName()))
+                {
+                  ((Player)localObject2).sendMessage(this.msgs.get("GlobalLobbyCantTeleportWhileInGame"));
+                  return true;
+                }
+                if (((PlayerData)this.playerData.get(paramCommandSender.getName())).hasCooldown((Player)paramCommandSender, "commands")) {
+                  return true;
+                }
+                ((PlayerData)this.playerData.get(paramCommandSender.getName())).setCooldown("commands", this.config.commandsCooldown);
+                if (this.globallobby == null)
+                {
+                  ((Player)localObject2).sendMessage(this.msgs.get("GlobalLobbyNotSet"));
+                  return true;
+                }
+                ((Player)localObject2).teleport(this.globallobby);
+                ((Player)localObject2).sendMessage(this.msgs.get("GlobalLobbyTeleport"));
+              }
+              else
+              {
+                paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+              }
+            }
+            else if (paramArrayOfString[0].equalsIgnoreCase("setglobaldeathmatch"))
+            {
+              if ((paramCommandSender instanceof Player))
+              {
+                localObject2 = (Player)paramCommandSender;
+                if (((Player)localObject2).hasPermission("sg.setglobaldeathmatch"))
+                {
+                  localObject6 = ((Player)localObject2).getLocation();
+                  for (localObject9 = Arena.arenaObjects.iterator(); ((Iterator)localObject9).hasNext();)
+                  {
+                    localObject8 = (Arena)((Iterator)localObject9).next();
+                    if (((Arena)localObject8).worldName.equalsIgnoreCase(((Location)localObject6).getWorld().getName()))
+                    {
+                      ((Player)localObject2).sendMessage(this.msgs.sgprefix + "The arena " + ChatColor.AQUA + ((Arena)localObject8).name + ChatColor.GOLD + " is using this world!");
+                      return true;
+                    }
+                  }
+                  getConfig().set("Global-Deathmatch.world", ((Location)localObject6).getWorld().getName());
+                  getConfig().set("Global-Deathmatch.x", Integer.valueOf(((Location)localObject6).getBlockX()));
+                  getConfig().set("Global-Deathmatch.y", Integer.valueOf(((Location)localObject6).getBlockY()));
+                  getConfig().set("Global-Deathmatch.z", Integer.valueOf(((Location)localObject6).getBlockZ()));
+                  getConfig().set("Global-Deathmatch.yaw", Float.valueOf(((Location)localObject6).getYaw()));
+                  getConfig().set("Global-Deathmatch.pitch", Float.valueOf(((Location)localObject6).getPitch()));
+                  saveConfig();
+                  ((Player)localObject2).sendMessage(this.msgs.sgprefix + ChatColor.GREEN + "Global deathmatch location data has been saved! please note that global deathmatch is only used in BungeeMode and wont be noticed otherwise.");
+                  ((Player)localObject2).getWorld().save();
+                  new BukkitRunnable()
+                  {
+                    public void run()
+                    {
+                      localObject2.sendMessage(main.this.msgs.sgprefix + "Creating a backup of the global deathmatch world...");
+                      main.this.filesManager.copyWorld(localObject2.getWorld().getWorldFolder(), new File(main.this.getDataFolder(), "Global-Deathmatch"));
+                      localObject2.sendMessage(main.this.msgs.sgprefix + ChatColor.GREEN + "Success! " + ChatColor.GOLD + "Global deathmatch has been created");
+                    }
+                  }.runTaskAsynchronously(this);
+                }
+                else
+                {
+                  ((Player)localObject2).sendMessage(this.msgs.get("NoPermission"));
+                }
+              }
+              else
+              {
+                paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+              }
+            }
+            else if (paramArrayOfString[0].equalsIgnoreCase("info"))
+            {
+              if ((paramCommandSender instanceof Player))
+              {
+                if (((PlayerData)this.playerData.get(paramCommandSender.getName())).hasCooldown((Player)paramCommandSender, "commands")) {
+                  return true;
+                }
+                ((PlayerData)this.playerData.get(paramCommandSender.getName())).setCooldown("commands", this.config.commandsCooldown);
+              }
+              paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ---------" + ChatColor.GOLD + " SurvivalGames " + ChatColor.AQUA + ChatColor.STRIKETHROUGH + "--------- ");
+              paramCommandSender.sendMessage(ChatColor.GOLD + "Version: " + ChatColor.AQUA + getDescription().getVersion());
+              paramCommandSender.sendMessage(ChatColor.GOLD + "Server version: " + ChatColor.AQUA + Bukkit.getBukkitVersion());
+              paramCommandSender.sendMessage(ChatColor.GOLD + "Advanced-Rollback: " + ChatColor.AQUA + this.config.AdvancedRollback);
+              paramCommandSender.sendMessage(ChatColor.GOLD + "Global-Deathmatch: " + ChatColor.AQUA + (this.globaldeathmatch != null));
+              paramCommandSender.sendMessage(ChatColor.GOLD + "Allow-Arena-Modifications: " + ChatColor.AQUA + this.config.AllowArenaModifications);
+              paramCommandSender.sendMessage(ChatColor.GOLD + "Vault: " + ChatColor.AQUA + this.config.useVault);
+              paramCommandSender.sendMessage(ChatColor.GOLD + "UUID: " + ChatColor.AQUA + this.config.useUUID);
+              paramCommandSender.sendMessage(ChatColor.GOLD + "MySQL: " + ChatColor.AQUA + this.config.usemysql);
+              paramCommandSender.sendMessage(ChatColor.GOLD + "BungeeMode: " + ChatColor.AQUA + this.config.BungeeMode);
+              paramCommandSender.sendMessage(ChatColor.GOLD + "Updater Running: " + ChatColor.AQUA + (this.Updater != null));
+              long l2 = this.nextUpdate == 0L ? 0L : (this.nextUpdate - System.currentTimeMillis()) / 1000L;
+              paramCommandSender.sendMessage(ChatColor.GOLD + "Next Update: " + ChatColor.AQUA + l2 + "s " + ChatColor.GOLD + "(" + ChatColor.AQUA + l2 / 60L + "m" + ChatColor.GOLD + ")");
+              paramCommandSender.sendMessage(ChatColor.GOLD + "Total Updates: " + ChatColor.AQUA + this.totalUpdates);
+              paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ------------------------------- ");
+            }
+            else if (paramArrayOfString[0].equalsIgnoreCase("pastebin"))
+            {
+              if (paramCommandSender.hasPermission("sg.pastebin")) {
+                new BukkitRunnable()
+                {
+                  public void run()
+                  {
+                    paramCommandSender.sendMessage(main.this.msgs.sgprefix + "Creating a new paste...");
+                    long l1 = System.currentTimeMillis();
+                    PastebinReporter.Paste localPaste = new PastebinReporter.Paste();
+                    localPaste.addLine("--------- SurvivalGames ---------");
+                    localPaste.addLine("- Author: Wazup92");
+                    localPaste.addLine("- Version: " + main.this.getDescription().getVersion());
+                    localPaste.addLine("- Advanced Rollback: " + main.this.config.AdvancedRollback);
+                    localPaste.addLine("- Global Deathmatch: " + (main.this.globaldeathmatch != null));
+                    localPaste.addLine("- Allow-Arena-Modifications-Enabled: " + main.this.config.AllowArenaModifications);
+                    localPaste.addLine("- Explosions-Damage-Blocks: " + main.this.config.ExplosionsDamageBlocks);
+                    localPaste.addLine("- Vault: " + main.this.config.useVault);
+                    localPaste.addLine("- UUID: " + main.this.config.useUUID);
+                    localPaste.addLine("- MySQL: " + main.this.config.usemysql);
+                    localPaste.addLine("- BungeeMode: " + main.this.config.BungeeMode);
+                    localPaste.addLine("- Updater Running: " + (main.this.Updater != null));
+                    long l2 = main.this.nextUpdate == 0L ? 0L : (main.this.nextUpdate - System.currentTimeMillis()) / 1000L;
+                    localPaste.addLine("- Next Update: " + l2 + "s (" + l2 / 60L + "m)");
+                    localPaste.addLine("- Total Updates: " + main.this.totalUpdates);
+                    localPaste.addLine("---------------------------------");
+                    localPaste.addLine(" ");
+                    localPaste.addLine(" ");
+                    localPaste.addLine("--------- Server ---------");
+                    localPaste.addLine("- Version: " + Bukkit.getBukkitVersion());
+                    Plugin[] arrayOfPlugin = Bukkit.getPluginManager().getPlugins();
+                    String str = arrayOfPlugin[0].getName() + "(v" + arrayOfPlugin[0].getDescription().getVersion() + ")";
+                    for (int i = 1; i < arrayOfPlugin.length; i++) {
+                      str = str + ", " + arrayOfPlugin[i].getName() + "(v" + arrayOfPlugin[i].getDescription().getVersion() + ")";
+                    }
+                    localPaste.addLine("- Plugins: " + str);
+                    localPaste.addLine("--------------------------");
+                    localPaste.addLine("");
+                    localPaste.addLine("");
+                    File[] arrayOfFile1 = { new File(main.this.getDataFolder(), "config.yml"), main.this.filesManager.customChestConfig, main.this.filesManager.customKitsConfig, main.this.filesManager.customMessagesConfig, 
+                      main.this.filesManager.customShopConfig, main.this.filesManager.customSignsConfig, main.this.filesManager.customSponsorConfig };
+                    File[] arrayOfFile2;
+                    int k = (arrayOfFile2 = arrayOfFile1).length;
+                    for (int j = 0; j < k; j++)
+                    {
+                      localObject = arrayOfFile2[j];
+                      localPaste.addLine("--------- " + ((File)localObject).getName() + " ---------");
+                      localPaste.addFile((File)localObject);
+                      localPaste.addLine("------------------------------");
+                      localPaste.addLine("");
+                      localPaste.addLine("");
+                    }
+                    localPaste.addLine("--------- Arenas ---------");
+                    k = (arrayOfFile2 = new File(main.this.getDataFolder(), "arenas").listFiles()).length;
+                    for (j = 0; j < k; j++)
+                    {
+                      localObject = arrayOfFile2[j];
+                      localPaste.addLine("");
+                      localPaste.addLine("");
+                      localPaste.addLine("-------" + ((File)localObject).getName() + "-------");
+                      localPaste.addFile(new File(main.this.getDataFolder() + "/arenas/" + ((File)localObject).getName(), "data.yml"));
+                      localPaste.addLine("");
+                      localPaste.addLine("");
+                    }
+                    localPaste.addLine("--------- Players.yml ---------");
+                    localPaste.addFile(main.this.filesManager.customPlayersConfig);
+                    localPaste.addLine("------------------------------");
+                    Object localObject = main.this.reporter.post("- SurvivalGames Debug - ", localPaste);
+                    long l3 = System.currentTimeMillis() - l1;
+                    paramCommandSender.sendMessage(main.this.msgs.sgprefix + "A pastebin has been created! URL:" + ChatColor.LIGHT_PURPLE + " " + (String)localObject + ChatColor.GOLD + ", took " + ChatColor.AQUA + l3 + ChatColor.GOLD + "ms (" + ChatColor.LIGHT_PURPLE + l3 / 1000L + ChatColor.GOLD + "s)");
+                    paramCommandSender.sendMessage(main.this.msgs.sgprefix + ChatColor.RED + "Be aware! this link gives out so many information about your server! including plugins, version, and mysql database, but no one can see it other than people who got that link");
+                  }
+                }.runTaskAsynchronously(this);
+              } else {
+                paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+              }
+            }
+            else
+            {
+              Object localObject3;
+              if (paramArrayOfString[0].equalsIgnoreCase("edit"))
+              {
+                if ((paramCommandSender instanceof Player))
+                {
+                  localObject3 = (Player)paramCommandSender;
+                  if (((Player)localObject3).hasPermission("sg.edit"))
+                  {
+                    if (paramArrayOfString.length == 1)
+                    {
+                      ((Player)localObject3).sendMessage(this.msgs.sgprefix + "Usage: /sg edit <Arena>");
+                      return true;
+                    }
+                    localObject6 = Arena.valueOf(paramArrayOfString[1]);
+                    if (localObject6 == null)
+                    {
+                      ((Player)localObject3).sendMessage(this.msgs.get("NoArenaFoundWithThatName"));
+                      return true;
+                    }
+                    ((Player)localObject3).openInventory(((Arena)localObject6).arenaEditor);
+                  }
+                  else
+                  {
+                    ((Player)localObject3).sendMessage(this.msgs.get("NoPermission"));
+                  }
+                }
+                else
+                {
+                  paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+                }
+              }
+              else
+              {
+                Object localObject4;
+                if (paramArrayOfString[0].equalsIgnoreCase("reset"))
+                {
+                  if (paramCommandSender.hasPermission("sg.reset"))
+                  {
+                    if (paramArrayOfString.length == 1)
+                    {
+                      paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg reset <Player> | All");
+                      return true;
+                    }
+                    if (paramArrayOfString[1].equalsIgnoreCase("all"))
+                    {
+                      for (localObject6 = this.playerData.keySet().iterator(); ((Iterator)localObject6).hasNext();)
+                      {
+                        localObject3 = (String)((Iterator)localObject6).next();
+                        localObject8 = (PlayerData)this.playerData.get(localObject3);
+                        localObject9 = Bukkit.getPlayer((String)localObject3);
+                        ((PlayerData)localObject8).reset((Player)localObject9);
+                      }
+                      if (this.config.usemysql)
+                      {
+                        try
+                        {
+                          this.mysql.getConnection().createStatement().executeUpdate("delete from " + this.mysql.prefix);
+                        }
+                        catch (SQLException localSQLException)
+                        {
+                          localSQLException.printStackTrace();
+                        }
+                      }
+                      else
+                      {
+                        this.filesManager.PlayersConfig.set("Players", null);
+                        this.filesManager.savePlayersConfig();
+                      }
+                      Bukkit.broadcastMessage(this.msgs.get("StatsReset"));
+                      paramCommandSender.sendMessage(this.msgs.sgprefix + ChatColor.GREEN + "Success!" + ChatColor.GOLD + " Everyone stats has been reset!");
+                    }
+                    else
+                    {
+                      localObject4 = Bukkit.getPlayer(paramArrayOfString[1]);
+                      if (localObject4 != null)
+                      {
+                        ((PlayerData)this.playerData.get(((Player)localObject4).getName())).reset((Player)localObject4);
+                        ((Player)localObject4).sendMessage(this.msgs.get("StatsReset"));
+                        paramCommandSender.sendMessage(this.msgs.sgprefix + ChatColor.GREEN + "Success!" + ChatColor.YELLOW + " " + ((Player)localObject4).getName() + ChatColor.GOLD + " stats has been reset!");
+                      }
+                      else
+                      {
+                        final long l3 = System.currentTimeMillis();
+                        
+                        localObject9 = new String[2];
+                        this.filesManager.executeDatabaseUpdate(paramCommandSender, paramArrayOfString[1], new BukkitRunnable()
+                        {
+                          public void run()
+                          {
+                            if (localObject9[1] == null)
+                            {
+                              try
+                              {
+                                main.this.mysql.getConnection().prepareStatement("delete from " + main.this.mysql.prefix + " WHERE player_name= '" + localObject9[0] + "';").executeUpdate();
+                                long l1 = System.currentTimeMillis() - l3;
+                                this.val$sender.sendMessage(main.this.msgs.sgprefix + "The player " + ChatColor.YELLOW + localObject9[0] + ChatColor.GOLD + " data has been erased! took " + ChatColor.LIGHT_PURPLE + l1 + "ms " + ChatColor.GOLD + "(" + ChatColor.AQUA + l1 / 1000L + "s" + ChatColor.GOLD + ") to erase the player data");
+                              }
+                              catch (SQLException localSQLException)
+                              {
+                                localSQLException.printStackTrace();
+                              }
+                            }
+                            else
+                            {
+                              main.this.filesManager.PlayersConfig.set("Players." + localObject9[0], null);
+                              main.this.filesManager.savePlayersConfig();
+                              long l2 = System.currentTimeMillis() - l3;
+                              this.val$sender.sendMessage(main.this.msgs.sgprefix + "The player " + ChatColor.YELLOW + localObject9[1] + ChatColor.GOLD + " data has been erased! took " + ChatColor.LIGHT_PURPLE + l2 + "ms " + ChatColor.GOLD + "(" + ChatColor.AQUA + l2 / 1000L + "s" + ChatColor.GOLD + ") to erase the player data");
+                            }
+                          }
+                        }, (String[])localObject9);
+                      }
+                    }
+                  }
+                  else
+                  {
+                    paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+                  }
+                }
+                else
+                {
+                  Object localObject15;
+                  if (paramArrayOfString[0].equalsIgnoreCase("vote"))
+                  {
+                    if ((paramCommandSender instanceof Player))
+                    {
+                      localObject4 = (Player)paramCommandSender;
+                      if ((this.spectator.contains(((Player)localObject4).getName())) && (this.bungeeMode.selectedArena == null))
+                      {
+                        Inventory localInventory = Bukkit.createInventory(null, 18, plugin.config.VoteInventoryName);
+                        localObject8 = new ArrayList(((PlayerData)plugin.playerData.get(((Player)localObject4).getName())).votes);
+                        localObject9 = new ArrayList();
+                        int i5 = 9;
+                        for (localIterator3 = Arena.arenaObjects.iterator(); localIterator3.hasNext();)
+                        {
+                          localObject12 = (Arena)localIterator3.next();
+                          localInventory.addItem(new ItemStack[] { ((Arena)localObject12).voteItem });
+                          int i10 = 7;
+                          for (Iterator localIterator6 = ((ArrayList)localObject8).iterator(); localIterator6.hasNext();)
+                          {
+                            localObject15 = (String)localIterator6.next();
+                            if (((String)localObject15).equals(((Arena)localObject12).name)) {
+                              ((ArrayList)localObject9).add(((Arena)localObject12).name);
+                            }
+                          }
+                          ((ArrayList)localObject8).removeAll((Collection)localObject9);
+                          if (((ArrayList)localObject9).size() == 1) {
+                            i10 = 5;
+                          }
+                          if (((ArrayList)localObject9).size() == 2) {
+                            i10 = 4;
+                          }
+                          if (((ArrayList)localObject9).size() == 3) {
+                            i10 = 14;
+                          }
+                          ((ArrayList)localObject9).clear();
+                          localInventory.setItem(i5, new ItemStack(Material.STAINED_GLASS_PANE, 1, (short)i10));
+                          i5++;
+                        }
+                        ((Player)localObject4).openInventory(localInventory);
+                      }
+                      else
+                      {
+                        ((Player)localObject4).sendMessage(this.msgs.get("CantVote"));
+                      }
+                    }
+                    else
+                    {
+                      paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+                    }
+                  }
+                  else if (paramArrayOfString[0].equalsIgnoreCase("worldmanager"))
+                  {
+                    if (paramCommandSender.hasPermission("sg.worldmanager"))
+                    {
+                      if ((paramArrayOfString.length < 3) || (!this.worldManagerCommands.contains(localObject4 = paramArrayOfString[1].toLowerCase())))
+                      {
+                        paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ---------" + ChatColor.GOLD + " SurvivalGames " + ChatColor.AQUA + ChatColor.STRIKETHROUGH + "--------- ");
+                        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG WorldManager Backup <Arena>" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Creates a world backup of an arena");
+                        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG WorldManager Rollback <Arena>" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Restores a world backup of an arena");
+                        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG WorldManager Import <World>" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Imports an unloaded world");
+                        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG WorldManager Delete <World>" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Deletes a world");
+                        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG WorldManager Create <World> <Type>" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Creates a world");
+                        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG WorldManager Tp <World>" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Teleports you to a specific world");
+                        paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.GOLD + "/SG WorldManager List Worlds" + ChatColor.DARK_AQUA + " -> " + ChatColor.GREEN + "Shows a list of loaded worlds");
+                        paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ------------------------------- ");
+                        return true;
+                      }
+                      final long l4 = System.currentTimeMillis();
+                      Object localObject10;
+                      if ((((String)localObject4).equals("backup")) || (((String)localObject4).equals("rollback")))
+                      {
+                        localObject9 = Arena.valueOf(paramArrayOfString[2]);
+                        if (localObject9 == null)
+                        {
+                          paramCommandSender.sendMessage(this.msgs.get("NoArenaFoundWithThatName"));
+                          return true;
+                        }
+                        localObject10 = Bukkit.getWorld(((Arena)localObject9).worldName);
+                        if (localObject10 == null)
+                        {
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "That arena world isn't loaded!");
+                          return true;
+                        }
+                        if (((Arena)localObject9).state != Arena.ArenaState.DISABLED)
+                        {
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "The arena state must be disabled!");
+                          return true;
+                        }
+                        if (((String)localObject4).equals("backup"))
+                        {
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "Creating a backup of the arena world...");
+                          new BukkitRunnable()
+                          {
+                            public void run()
+                            {
+                              main.this.filesManager.copyWorld(Bukkit.getWorld(localObject9.worldName).getWorldFolder(), new File(main.this.getDataFolder() + "/arenas/" + localObject9.name, localObject9.worldName + "_Backup"));
+                              paramCommandSender.sendMessage(main.this.msgs.sgprefix + "The backup has been created! took " + ChatColor.LIGHT_PURPLE + (System.currentTimeMillis() - l4) + "ms!");
+                            }
+                          }.runTaskAsynchronously(this);
+                        }
+                        else
+                        {
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "Restoring the world...");
+                          ((Arena)localObject9).previousState = ((Arena)localObject9).state;
+                          ((Arena)localObject9).state = Arena.ArenaState.ROLLBACKING;
+                          ((Arena)localObject9).updateSignState();
+                          this.logger.info("[SurvivalGames] Rolling back the arena " + ((Arena)localObject9).name + " world");
+                          ((Arena)localObject9).rollbackWorld();
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "Check your console to see logs");
+                        }
+                      }
+                      else if (((String)localObject4).equals("import"))
+                      {
+                        if (Bukkit.getWorld(paramArrayOfString[2]) != null)
+                        {
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "There is already a loaded world with that name!");
+                          return true;
+                        }
+                        localObject9 = "";
+                        String[] arrayOfString;
+                        int i8 = (arrayOfString = Bukkit.getWorldContainer().list()).length;
+                        for (int i7 = 0; i7 < i8; i7++)
+                        {
+                          localObject10 = arrayOfString[i7];
+                          if (((String)localObject10).equalsIgnoreCase(paramArrayOfString[2]))
+                          {
+                            localObject9 = localObject10;
+                            break;
+                          }
+                        }
+                        if (((String)localObject9).isEmpty())
+                        {
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "Couldn't find any world with that name!");
+                          return true;
+                        }
+                        paramCommandSender.sendMessage(this.msgs.sgprefix + "Importing the world...");
+                        Bukkit.createWorld(new WorldCreator((String)localObject9));
+                        paramCommandSender.sendMessage(this.msgs.sgprefix + "World has been imported! or not? check your console for logs! took " + ChatColor.LIGHT_PURPLE + (System.currentTimeMillis() - l4) + "ms!");
+                      }
+                      else
+                      {
+                        Player localPlayer5;
+                        int i11;
+                        int i9;
+                        if (((String)localObject4).equals("delete"))
+                        {
+                          localObject9 = Bukkit.getWorld(paramArrayOfString[2]);
+                          localObject10 = null;
+                          if (localObject9 != null)
+                          {
+                            if (!((World)localObject9).getPlayers().isEmpty())
+                            {
+                              paramCommandSender.sendMessage(this.msgs.sgprefix + "That world contains players. so the world couldn't be deleted!");
+                              for (Iterator localIterator4 = ((World)localObject9).getPlayers().iterator(); localIterator4.hasNext(); paramCommandSender.sendMessage(this.msgs.sgprefix + "- " + localPlayer5.getName())) {
+                                localPlayer5 = (Player)localIterator4.next();
+                              }
+                              return true;
+                            }
+                            localObject10 = ((World)localObject9).getWorldFolder();
+                            Bukkit.unloadWorld((World)localObject9, false);
+                          }
+                          else
+                          {
+                            paramCommandSender.sendMessage(this.msgs.sgprefix + "The world you looking for seems to be unloaded, looking up folders...");
+                            i11 = (localObject15 = Bukkit.getWorldContainer().listFiles()).length;
+                            for (i9 = 0; i9 < i11; i9++)
+                            {
+                              localPlayer5 = localObject15[i9];
+                              if (localPlayer5.getName().equalsIgnoreCase(paramArrayOfString[2]))
+                              {
+                                localObject10 = localPlayer5;
+                                break;
+                              }
+                            }
+                          }
+                          if (localObject10 != null)
+                          {
+                            this.filesManager.deleteWorld((File)localObject10);
+                            paramCommandSender.sendMessage(this.msgs.sgprefix + "World has been deleted! took " + ChatColor.LIGHT_PURPLE + (System.currentTimeMillis() - l4) + "ms!");
+                          }
+                          else
+                          {
+                            paramCommandSender.sendMessage(this.msgs.sgprefix + "Couldn't find a world with that name!");
+                          }
+                        }
+                        else if (((String)localObject4).equals("create"))
+                        {
+                          localObject9 = "";
+                          localObject10 = Arrays.asList(new String[] { "normal", "nether", "the_end", "empty" });
+                          if ((paramArrayOfString.length < 4) || (!((List)localObject10).contains(localObject9 = paramArrayOfString[3].toLowerCase())))
+                          {
+                            paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg worldmanager create <world> normal/nether/the_end/empty");
+                            return true;
+                          }
+                          if (Bukkit.getWorld(paramArrayOfString[2]) != null)
+                          {
+                            paramCommandSender.sendMessage(this.msgs.sgprefix + "There is a world with that name!");
+                            return true;
+                          }
+                          i11 = (localObject15 = Bukkit.getWorldContainer().list()).length;
+                          for (i9 = 0; i9 < i11; i9++)
+                          {
+                            localPlayer5 = localObject15[i9];
+                            if (localPlayer5.equalsIgnoreCase(paramArrayOfString[2]))
+                            {
+                              paramCommandSender.sendMessage(this.msgs.sgprefix + "Seems like there is an unloaded world with that name! try using /sg worldmanager import <world>");
+                              return true;
+                            }
+                          }
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "Creating the new world!");
+                          if (((String)localObject9).equals("empty")) {
+                            Bukkit.createWorld(new WorldCreator(paramArrayOfString[2]).generator(new ChunkGenerator()
+                            {
+                              public byte[][] generateBlockSections(World paramAnonymousWorld, Random paramAnonymousRandom, int paramAnonymousInt1, int paramAnonymousInt2, ChunkGenerator.BiomeGrid paramAnonymousBiomeGrid)
+                              {
+                                return new byte[paramAnonymousWorld.getMaxHeight() / 16][];
+                              }
+                            }));
+                          } else {
+                            Bukkit.createWorld(new WorldCreator(paramArrayOfString[2]).environment(World.Environment.valueOf(((String)localObject9).toUpperCase())));
+                          }
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "World has been created! use /sg worldmanager tp " + paramArrayOfString[2] + " if you would like to be teleported there, took " + ChatColor.LIGHT_PURPLE + (System.currentTimeMillis() - l4) + "ms!");
+                        }
+                        else if (((String)localObject4).equals("tp"))
+                        {
+                          if ((paramCommandSender instanceof Player))
+                          {
+                            localObject9 = (Player)paramCommandSender;
+                            if (Bukkit.getWorld(paramArrayOfString[2]) == null)
+                            {
+                              ((Player)localObject9).sendMessage(this.msgs.sgprefix + "Couldn't find a world with that name!");
+                              return true;
+                            }
+                            ((Player)localObject9).teleport(Bukkit.getWorld(paramArrayOfString[2]).getSpawnLocation());
+                            ((Player)localObject9).sendMessage(this.msgs.sgprefix + "You have been teleported to " + paramArrayOfString[2] + "!");
+                          }
+                          else
+                          {
+                            paramCommandSender.sendMessage(this.msgs.get("NoConsole"));
+                          }
+                        }
+                        else if (((String)localObject4).equals("list"))
+                        {
+                          paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ---------" + ChatColor.GOLD + " SurvivalGames " + ChatColor.AQUA + ChatColor.STRIKETHROUGH + "--------- ");
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "Loaded worlds: " + ChatColor.LIGHT_PURPLE + Bukkit.getWorlds().size());
+                          for (localObject10 = Bukkit.getWorlds().iterator(); ((Iterator)localObject10).hasNext();)
+                          {
+                            localObject9 = (World)((Iterator)localObject10).next();
+                            paramCommandSender.sendMessage(ChatColor.AQUA + "- " + ChatColor.LIGHT_PURPLE + ((World)localObject9).getName() + ChatColor.DARK_AQUA + " -> " + ChatColor.RED + "Environment: " + ChatColor.AQUA + ((World)localObject9).getEnvironment().name() + 
+                              ", " + ChatColor.YELLOW + "Difficulty: " + ChatColor.AQUA + ((World)localObject9).getDifficulty().name() + ", " + ChatColor.GREEN + "PVP: " + ChatColor.AQUA + ((World)localObject9).getPVP() + ", " + ChatColor.DARK_AQUA + "Players: " + ChatColor.AQUA + ((World)localObject9).getPlayers().size());
+                          }
+                          paramCommandSender.sendMessage(ChatColor.AQUA + ChatColor.STRIKETHROUGH + " ------------------------------- ");
+                        }
+                      }
+                    }
+                    else
+                    {
+                      paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+                    }
+                  }
+                  else if (paramArrayOfString[0].equalsIgnoreCase("kit")) {
+                    if (paramCommandSender.hasPermission("sg.kit"))
+                    {
+                      if ((paramArrayOfString.length == 1) || (!paramArrayOfString[1].equalsIgnoreCase("give")))
+                      {
+                        paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg kit give");
+                        paramCommandSender.sendMessage(this.msgs.sgprefix + "More commands will be added soon");
+                        return true;
+                      }
+                      localObject4 = paramArrayOfString[1].toLowerCase();
+                      if (((String)localObject4).equals("give"))
+                      {
+                        if (paramArrayOfString.length < 4)
+                        {
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "Usage: /sg kit give <Player> <Kit>");
+                          return true;
+                        }
+                        if (!this.kits.containsKey(paramArrayOfString[3].toLowerCase()))
+                        {
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "Couldn't find a kit with that name!");
+                          return true;
+                        }
+                        Player localPlayer2 = Bukkit.getPlayer(paramArrayOfString[2]);
+                        localObject8 = (Kit)this.kits.get(paramArrayOfString[3].toLowerCase());
+                        if (localPlayer2 != null)
+                        {
+                          localObject9 = (PlayerData)this.playerData.get(localPlayer2.getName());
+                          if (((PlayerData)localObject9).kits.contains(((Kit)localObject8).name.toLowerCase()))
+                          {
+                            paramCommandSender.sendMessage(this.msgs.sgprefix + "The player already has that kit unlocked!");
+                            return true;
+                          }
+                          ((PlayerData)localObject9).kits.add(((Kit)localObject8).name.toLowerCase());
+                          ((PlayerData)localObject9).ownedKits.addItem(new ItemStack[] { ((Kit)localObject8).logo });
+                          paramCommandSender.sendMessage(this.msgs.sgprefix + "Kit has been successfully granted to the player " + ChatColor.AQUA + localPlayer2.getName());
+                          localPlayer2.sendMessage(this.msgs.get("KitPurchase").replace("%kitname%", ((Kit)localObject8).name).replace("%cost%", String.valueOf(0)));
+                        }
+                        else
+                        {
+                          localObject9 = new String[2];
+                          this.filesManager.executeDatabaseUpdate(paramCommandSender, paramArrayOfString[2], new BukkitRunnable()
+                          {
+                            public void run()
+                            {
+                              if (localObject9[1] == null) {
+                                try
+                                {
+                                  ResultSet localResultSet = main.this.mysql.getConnection().createStatement().executeQuery("SELECT * FROM " + main.this.mysql.prefix + " WHERE player_name = '" + localObject9[0] + "';");
+                                  localResultSet.next();
+                                  localObject = localResultSet.getString("Kits");
+                                  if ((((String)localObject).equalsIgnoreCase("null")) || (((String)localObject).isEmpty()))
+                                  {
+                                    localObject = localObject8.name.toLowerCase();
+                                  }
+                                  else
+                                  {
+                                    if (((String)localObject).contains(localObject8.name.toLowerCase()))
+                                    {
+                                      paramCommandSender.sendMessage(main.this.msgs.sgprefix + "The player already has that kit unlocked!");
+                                      return;
+                                    }
+                                    localObject = localObject + ", " + localObject8.name.toLowerCase();
+                                  }
+                                  main.this.mysql.getConnection().prepareStatement("UPDATE " + main.this.config.tableprefix + " SET Kits='" + (String)localObject + "' WHERE player_name = '" + localObject9[0] + "';").executeUpdate();
+                                  paramCommandSender.sendMessage(main.this.msgs.sgprefix + "Kit has been granted successfully to the player! " + ChatColor.AQUA + localObject9[0]);
+                                  localResultSet.close();
+                                }
+                                catch (SQLException localSQLException)
+                                {
+                                  localSQLException.printStackTrace();
+                                }
+                              }
+                              String str1 = "Players." + localObject9[0];
+                              Object localObject = main.this.filesManager.PlayersConfig;
+                              String str2 = ((FileConfiguration)localObject).getString(str1 + ".Kits");
+                              if ((str2 == null) || (str2.isEmpty()))
+                              {
+                                str2 = localObject8.name.toLowerCase();
+                              }
+                              else if (!str2.contains(localObject8.name.toLowerCase()))
+                              {
+                                str2 = str2 + ", " + localObject8.name.toLowerCase();
+                              }
+                              else
+                              {
+                                paramCommandSender.sendMessage(main.this.msgs.sgprefix + "The player already has that kit unlocked!");
+                                return;
+                              }
+                              ((FileConfiguration)localObject).set(str1 + ".Kits", str2);
+                              main.this.filesManager.savePlayersConfig();
+                              paramCommandSender.sendMessage(main.this.msgs.sgprefix + "Kit has been granted successfully to the player! " + ChatColor.AQUA + localObject9[1]);
+                            }
+                          }, (String[])localObject9);
+                        }
+                      }
+                    }
+                    else
+                    {
+                      paramCommandSender.sendMessage(this.msgs.get("NoPermission"));
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+  
+  public ItemStack setName(ItemStack paramItemStack, String paramString)
+  {
+    ItemMeta localItemMeta = paramItemStack.getItemMeta();
+    localItemMeta.setDisplayName(paramString);
+    paramItemStack.setItemMeta(localItemMeta);
+    return paramItemStack;
+  }
+  
+  public boolean isNumber(String paramString)
+  {
+    try
+    {
+      Integer.parseInt(paramString);
+      return true;
+    }
+    catch (NumberFormatException localNumberFormatException) {}
+    return false;
+  }
+  
+  public void loadArenas()
+  {
+    Arena localArena;
+    for (Iterator localIterator = Arena.arenaObjects.iterator(); localIterator.hasNext(); localArena.stop(false, true)) {
+      localArena = (Arena)localIterator.next();
+    }
+    Arena.arenaObjects.clear();
+    
+    getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable()
+    {
+      public void run()
+      {
+        if (!new File(main.this.getDataFolder(), "arenas").isDirectory()) {
+          return;
+        }
+        ArrayList localArrayList1 = new ArrayList();
+        File[] arrayOfFile1 = new File(main.this.getDataFolder(), "arenas").listFiles();
+        File[] arrayOfFile2;
+        int k = (arrayOfFile2 = arrayOfFile1).length;
+        Object localObject1;
+        for (int i = 0; i < k; i++)
+        {
+          localObject1 = arrayOfFile2[i];
+          if ((((File)localObject1).isDirectory()) && 
+            (new File(main.this.getDataFolder() + "/arenas/" + ((File)localObject1).getName(), "data.yml").exists())) {
+            localArrayList1.add(((File)localObject1).getName());
+          }
+        }
+        Object localObject5;
+        Object localObject4;
+        Object localObject3;
+        if (main.this.config.BungeeMode)
+        {
+          localObject1 = new ArrayList();
+          
+          int m = (localObject5 = arrayOfFile1).length;
+          for (k = 0; k < m; k++)
+          {
+            Object localObject2 = localObject5[k];
+            File localFile = new File(main.this.getDataFolder() + "/arenas/" + ((File)localObject2).getName(), "data.yml");
+            YamlConfiguration localYamlConfiguration = YamlConfiguration.loadConfiguration(localFile);
+            if (!localYamlConfiguration.getBoolean("enabled"))
+            {
+              localArrayList1.remove(((File)localObject2).getName());
+              ((ArrayList)localObject1).add(((File)localObject2).getName());
+            }
+          }
+          int j = main.this.config.BungeeModeAmountOfRandomisedMaps < 9 ? main.this.config.BungeeModeAmountOfRandomisedMaps : 9;
+          if (localArrayList1.size() > j)
+          {
+            k = localArrayList1.size() - j;
+            for (m = 0; m < k; m++)
+            {
+              localObject5 = (String)localArrayList1.get(main.this.random.nextInt(localArrayList1.size()));
+              localArrayList1.remove(localObject5);
+              ((ArrayList)localObject1).add(localObject5);
+            }
+          }
+          if (main.this.getConfig().getBoolean("Bungee-Mode-Unload-Unused-Arenas-Worlds")) {
+            for (localObject4 = ((ArrayList)localObject1).iterator(); ((Iterator)localObject4).hasNext();)
+            {
+              localObject3 = (String)((Iterator)localObject4).next();
+              Bukkit.unloadWorld(YamlConfiguration.loadConfiguration(new File(main.this.getDataFolder() + "/arenas/" + (String)localObject3, "data.yml")).getString("world"), false);
+            }
+          }
+        }
+        for (Iterator localIterator1 = localArrayList1.iterator(); localIterator1.hasNext();)
+        {
+          localObject1 = (String)localIterator1.next();
+          localObject3 = YamlConfiguration.loadConfiguration(new File(main.this.getDataFolder() + "/arenas/" + (String)localObject1, "data.yml")).getString("world");
+          if (Bukkit.getWorld((String)localObject3) == null)
+          {
+            main.this.logger.info("[SurvivalGames] Loading arena " + (String)localObject1 + " world, since it wasn't loaded by default");
+            Bukkit.createWorld(new WorldCreator((String)localObject3));
+          }
+        }
+        for (localIterator1 = localArrayList1.iterator(); localIterator1.hasNext();)
+        {
+          localObject1 = (String)localIterator1.next();
+          localObject3 = new File(main.this.getDataFolder() + "/arenas/" + (String)localObject1, "data.yml");
+          localObject4 = YamlConfiguration.loadConfiguration((File)localObject3);
+          localObject5 = ((FileConfiguration)localObject4).getString("world");
+          int n = ((FileConfiguration)localObject4).getInt("minPlayers");
+          int i1 = ((FileConfiguration)localObject4).getInt("maxPlayers");
+          Arena.ArenaState localArenaState = Arena.ArenaState.WAITING;
+          if (!((FileConfiguration)localObject4).getBoolean("enabled")) {
+            localArenaState = Arena.ArenaState.DISABLED;
+          }
+          ArrayList localArrayList2 = new ArrayList();
+          Object localObject7;
+          if (((FileConfiguration)localObject4).getConfigurationSection("spawnpoints") != null) {
+            for (localObject7 = ((FileConfiguration)localObject4).getConfigurationSection("spawnpoints").getKeys(false).iterator(); ((Iterator)localObject7).hasNext();)
+            {
+              localObject6 = (String)((Iterator)localObject7).next();
+              int i3 = ((FileConfiguration)localObject4).getInt("spawnpoints." + (String)localObject6 + ".x");
+              i5 = ((FileConfiguration)localObject4).getInt("spawnpoints." + (String)localObject6 + ".y");
+              i6 = ((FileConfiguration)localObject4).getInt("spawnpoints." + (String)localObject6 + ".z");
+              i7 = ((FileConfiguration)localObject4).getInt("spawnpoints." + (String)localObject6 + ".yaw");
+              i8 = ((FileConfiguration)localObject4).getInt("spawnpoints." + (String)localObject6 + ".pitch");
+              localArrayList2.add(new Location(Bukkit.getWorld((String)localObject5), i3 + 0.5D, i5 + 1, i6 + 0.5D, i7, i8));
+            }
+          }
+          Object localObject6 = new ArrayList();
+          if (((FileConfiguration)localObject4).getConfigurationSection("deathmatch.spawnpoints") != null) {
+            for (Iterator localIterator2 = ((FileConfiguration)localObject4).getConfigurationSection("deathmatch.spawnpoints").getKeys(false).iterator(); localIterator2.hasNext();)
+            {
+              localObject7 = (String)localIterator2.next();
+              i5 = ((FileConfiguration)localObject4).getInt("deathmatch.spawnpoints." + (String)localObject7 + ".x");
+              i6 = ((FileConfiguration)localObject4).getInt("deathmatch.spawnpoints." + (String)localObject7 + ".y");
+              i7 = ((FileConfiguration)localObject4).getInt("deathmatch.spawnpoints." + (String)localObject7 + ".z");
+              i8 = ((FileConfiguration)localObject4).getInt("deathmatch.spawnpoints." + (String)localObject7 + ".yaw");
+              i9 = ((FileConfiguration)localObject4).getInt("deathmatch.spawnpoints." + (String)localObject7 + ".pitch");
+              ((ArrayList)localObject6).add(new Location(Bukkit.getWorld((String)localObject5), i5 + 0.5D, i6, i7 + 0.5D, i8, i9));
+            }
+          }
+          int i2 = ((FileConfiguration)localObject4).getInt("lobby-time");
+          int i4 = ((FileConfiguration)localObject4).getInt("game-time");
+          int i5 = ((FileConfiguration)localObject4).getInt("grace-time");
+          int i6 = ((FileConfiguration)localObject4).getInt("warn-every-seconds");
+          int i7 = ((FileConfiguration)localObject4).getInt("chests-refill-at");
+          int i8 = ((FileConfiguration)localObject4).getInt("minimum-chest-items");
+          int i9 = ((FileConfiguration)localObject4).getInt("max-chest-items");
+          int i10 = ((FileConfiguration)localObject4).getInt("deathmatch-time");
+          int i11 = ((FileConfiguration)localObject4).getInt("time-till-deathmatch-start-after-announce");
+          int i12 = ((FileConfiguration)localObject4).getInt("playerstilldeathmatch");
+          int i13 = ((FileConfiguration)localObject4).getInt("deathmatch-grace-time");
+          int i14 = ((FileConfiguration)localObject4).getInt("minimum-chest-tier2-items");
+          int i15 = ((FileConfiguration)localObject4).getInt("max-chest-tier2-items");
+          Location localLocation = null;
+          FileConfiguration localFileConfiguration = main.this.filesManager.SignsConfig;
+          if (localFileConfiguration.contains("Signs.Join." + (String)localObject1)) {
+            localLocation = new Location(Bukkit.getWorld(localFileConfiguration.getString("Signs.Join." + (String)localObject1 + ".world")), localFileConfiguration.getInt("Signs.Join." + (String)localObject1 + ".x"), localFileConfiguration.getInt("Signs.Join." + (String)localObject1 + ".y"), localFileConfiguration.getInt("Signs.Join." + (String)localObject1 + ".z"));
+          }
+          Arena localArena = new Arena((String)localObject1, n, i1, (String)localObject5, localArenaState, localArrayList2, i4, i2, i5, i6, i7, i8, i9, (ArrayList)localObject6, i11, i10, i12, localLocation, i13, i14, i15, main.plugin, (File)localObject3);
+          localArena.updateSignPlayers();
+          localArena.updateSignState();
+        }
+        if (main.this.config.BungeeMode)
+        {
+          for (localIterator1 = Arena.arenaObjects.iterator(); localIterator1.hasNext();)
+          {
+            localObject1 = (Arena)localIterator1.next();
+            main.this.bungeeMode.arenasVotes.put(((Arena)localObject1).name, Integer.valueOf(0));
+          }
+          main.this.bungeeMode.createScoreboard();
+          for (localIterator1 = main.this.getOnlinePlayers().iterator(); localIterator1.hasNext();)
+          {
+            localObject1 = (Player)localIterator1.next();
+            main.this.bungeeMode.bungeeJoin((Player)localObject1, true, -1);
+          }
+          main.this.bungeeMode.scoreboard.resetScores(ChatColor.DARK_AQUA + "Players" + ChatColor.AQUA + ": " + 0);
+          main.this.bungeeMode.objective.getScore(ChatColor.DARK_AQUA + "Players" + ChatColor.AQUA + ": " + main.this.getOnlinePlayers().size()).setScore(-3);
+        }
+        if ((!Arena.arenaObjects.isEmpty()) && (main.this.config.AdvancedRollback))
+        {
+          for (localIterator1 = Arena.arenaObjects.iterator(); localIterator1.hasNext();)
+          {
+            localObject1 = (Arena)localIterator1.next();
+            ((Arena)localObject1).state = Arena.ArenaState.ROLLBACKING;
+            ((Arena)localObject1).updateSignState();
+          }
+          new BukkitRunnable()
+          {
+            Arena currentArena;
+            int i = 0;
+            
+            public void run()
+            {
+              if (this.i == Arena.arenaObjects.size())
+              {
+                cancel();
+                return;
+              }
+              if ((this.currentArena != null) && (this.currentArena.state.equals(Arena.ArenaState.ROLLBACKING))) {
+                return;
+              }
+              this.currentArena = ((Arena)Arena.arenaObjects.get(this.i));
+              main.this.logger.info("[SurvivalGames] Rolling back the arena " + this.currentArena.name + " world");
+              this.currentArena.previousState = Arena.ArenaState.WAITING;
+              this.currentArena.rollbackWorld();
+              this.currentArena = null;
+              this.i += 1;
+            }
+          }.runTaskTimer(main.plugin, 0L, 40L);
+        }
+      }
+    }, getConfig().getInt("Load-Arenas-Delay-OnEnable"));
+  }
+  
+  public void clearPlayerData(Player paramPlayer)
+  {
+    paramPlayer.getInventory().clear();
+    paramPlayer.getInventory().setArmorContents(null);
+    paramPlayer.setHealth(paramPlayer.getMaxHealth());
+    paramPlayer.setFoodLevel(20);
+    paramPlayer.setLevel(0);
+    paramPlayer.setExp(0.0F);
+    paramPlayer.setGameMode(GameMode.SURVIVAL);
+    paramPlayer.setAllowFlight(false);
+    paramPlayer.setFlying(false);
+    for (PotionEffect localPotionEffect : paramPlayer.getActivePotionEffects()) {
+      paramPlayer.removePotionEffect(localPotionEffect.getType());
+    }
+  }
+  
+  public void addLore(ItemStack paramItemStack, String paramString)
+  {
+    ItemMeta localItemMeta = paramItemStack.getItemMeta();
+    Object localObject = new ArrayList();
+    if (localItemMeta.getLore() != null) {
+      localObject = localItemMeta.getLore();
+    }
+    ((List)localObject).add(paramString);
+    localItemMeta.setLore((List)localObject);
+    paramItemStack.setItemMeta(localItemMeta);
+  }
+  
+  public void loadItemsIntoShopInventory()
+  {
+    if (this.shopInventory != null)
+    {
+      this.shopInventory.clear();
+      for (String str : this.filesManager.ShopConfig.getStringList("Items")) {
+        try
+        {
+          String[] arrayOfString = str.split(" : ");
+          ItemStack localItemStack = this.filesManager.getItemStackFromString(arrayOfString, 3, true);
+          addLore(localItemStack, ChatColor.GOLD + "Price: " + ChatColor.AQUA + arrayOfString[2] + ChatColor.GOLD + " Coins!");
+          this.shopPurchases.put(localItemStack, Integer.valueOf(arrayOfString[2]));
+          this.shopInventory.addItem(new ItemStack[] { localItemStack });
+        }
+        catch (Exception localException)
+        {
+          localException.printStackTrace();
+          this.logger.info("[SurvivalGames] An error has occured while adding an item to the shop! its located in shops.yml at the line that says: " + str);
+        }
+      }
+    }
+  }
+  
+  public void loadKits()
+  {
+    String[] arrayOfString = { "boots", "leggings", "chestplate", "helmet" };
+    this.kits.clear();
+    this.defaultKits.clear();
+    FileConfiguration localFileConfiguration = this.filesManager.KitsConfig;
+    for (String str : localFileConfiguration.getConfigurationSection("Kits").getKeys(false)) {
+      try
+      {
+        ItemStack[] arrayOfItemStack = new ItemStack[4];
+        
+        int i = 0;
+        int k = (localObject3 = arrayOfString).length;
+        for (int j = 0; j < k; j++)
+        {
+          localObject1 = localObject3[j];
+          try
+          {
+            arrayOfItemStack[i] = this.filesManager.getItemStackFromString(localFileConfiguration.getString("Kits." + str + ".armor." + (String)localObject1).split(" : "), 1, false);
+            i++;
+          }
+          catch (Exception localException2)
+          {
+            this.logger.info("[SurvivalGames] Failed to create the kit " + str + " " + (String)localObject1 + "! make sure you are using the correct format!");
+            localException2.printStackTrace();
+          }
+        }
+        Object localObject1 = new ItemStack[35];
+        if (this.config.GiveCompassAtStart) {
+          localObject1[8] = this.tracker;
+        }
+        j = 0;
+        for (Object localObject3 = localFileConfiguration.getStringList("Kits." + str + ".items").iterator(); ((Iterator)localObject3).hasNext();)
+        {
+          localObject2 = (String)((Iterator)localObject3).next();
+          if (j == 35) {
+            break;
+          }
+          if ((j == 8) && (localObject1[8] != null) && (!localObject1[8].getType().equals(Material.AIR))) {
+            j++;
+          }
+          localObject1[j] = this.filesManager.getItemStackFromString(((String)localObject2).split(" : "), 2, true);
+          j++;
+        }
+        Object localObject2 = new ArrayList();
+        for (Object localObject4 = localFileConfiguration.getStringList("Kits." + str + ".potion-effects").iterator(); ((Iterator)localObject4).hasNext();)
+        {
+          localObject3 = (String)((Iterator)localObject4).next();
+          ((Collection)localObject2).add(new PotionEffect(PotionEffectType.getByName(localObject3.split(" : ")[0]), Integer.valueOf(localObject3.split(" : ")[1]).intValue() * 20, Integer.valueOf(localObject3.split(" : ")[2]).intValue() - 1));
+        }
+        localObject3 = setName(this.filesManager.getItemStackFromString(localFileConfiguration.getString("Kits." + str + ".item").split(" : "), 1, false), ChatColor.GREEN + str);
+        for (Object localObject5 = localFileConfiguration.getStringList("Kits." + str + ".description").iterator(); ((Iterator)localObject5).hasNext();)
+        {
+          localObject4 = (String)((Iterator)localObject5).next();
+          addLore((ItemStack)localObject3, ChatColor.translateAlternateColorCodes('&', (String)localObject4));
+        }
+        boolean bool1 = localFileConfiguration.getBoolean("Kits." + str + ".permission");
+        localObject5 = localFileConfiguration.getString("Kits." + str + ".permission-name");
+        boolean bool2 = localFileConfiguration.getBoolean("Kits." + str + ".buyable");
+        int m = localFileConfiguration.getInt("Kits." + str + ".price");
+        int n = localFileConfiguration.getInt("Kits." + str + ".position") - 1;
+        
+        this.kits.put(str.toLowerCase(), new Kit(arrayOfItemStack, (ItemStack[])localObject1, bool1, (String)localObject5, bool2, m, n, (Collection)localObject2, (ItemStack)localObject3, str));
+        if ((!bool1) && (!bool2)) {
+          this.defaultKits.add(str.toLowerCase());
+        }
+      }
+      catch (Exception localException1)
+      {
+        localException1.printStackTrace();
+        this.logger.info("[SurvivalGames] A problem has occured while loading the kit: " + str + " in kits.yml!");
+      }
+    }
+  }
+  
+  public void loadBountyInventory()
+  {
+    this.bountyInventory = Bukkit.createInventory(null, 18, ChatColor.RED + "Select an amount");
+    for (Iterator localIterator = getConfig().getIntegerList("Bounty").iterator(); localIterator.hasNext();)
+    {
+      int i = ((Integer)localIterator.next()).intValue();
+      this.bountyInventory.addItem(new ItemStack[] { setName(new ItemStack(Material.GOLD_INGOT), ChatColor.YELLOW + i + "$") });
+    }
+    this.bountyInventory.setItem(17, this.back);
+  }
+  
+  public void createScoreboard(Player paramPlayer, Arena paramArena)
+  {
+    if (this.game.contains(paramPlayer.getName())) {
+      if (this.config.ScoreboardEnabled)
+      {
+        PlayerData localPlayerData = (PlayerData)this.playerData.get(paramPlayer.getName());
+        Scoreboard localScoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        Objective localObjective = localScoreboard.registerNewObjective("SurvivalGames", "dummy");
+        localObjective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        localObjective.setDisplayName(this.msgs.scoreboardprefix);
+        localObjective.getScore("  ").setScore(9);
+        localObjective.getScore(this.msgs.scoreboardStats).setScore(8);
+        localObjective.getScore(this.msgs.scoreboardKills.replace("%kills%", String.valueOf(localPlayerData.kills))).setScore(7);
+        localObjective.getScore(this.msgs.scoreboardCoins.replace("%coins%", String.valueOf(localPlayerData.getCoins(paramPlayer)))).setScore(6);
+        localObjective.getScore(this.msgs.scoreboardWins.replace("%wins%", String.valueOf(localPlayerData.wins))).setScore(5);
+        localObjective.getScore("   ").setScore(4);
+        localObjective.getScore(this.msgs.scoreboardArena).setScore(3);
+        localObjective.getScore(this.msgs.scoreboardPlayers.replace("%players%", String.valueOf(paramArena.players.size()))).setScore(2);
+        localObjective.getScore(this.msgs.scoreboardViewers.replace("%viewers%", String.valueOf(paramArena.spectators.size()))).setScore(1);
+        localObjective.getScore(" ").setScore(0);
+        paramPlayer.setScoreboard(localScoreboard);
+      }
+      else
+      {
+        paramPlayer.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+      }
+    }
+  }
+  
+  private boolean setupEconomy()
+  {
+    if (getServer().getPluginManager().getPlugin("Vault") == null) {
+      return false;
+    }
+    RegisteredServiceProvider localRegisteredServiceProvider = getServer().getServicesManager().getRegistration(Economy.class);
+    if (localRegisteredServiceProvider == null) {
+      return false;
+    }
+    this.econ = ((Economy)localRegisteredServiceProvider.getProvider());
+    return this.econ != null;
+  }
+  
+  public void loadVipKits()
+  {
+    this.vipKitsInventory = null;
+    ArrayList localArrayList = new ArrayList();
+    Kit localKit;
+    for (Iterator localIterator = this.kits.values().iterator(); localIterator.hasNext();)
+    {
+      localKit = (Kit)localIterator.next();
+      if (localKit.permission) {
+        localArrayList.add(localKit);
+      }
+    }
+    if (localArrayList.isEmpty()) {
+      return;
+    }
+    this.vipKitsInventory = Bukkit.createInventory(null, 54, ChatColor.RED + "Vip kits");
+    for (localIterator = localArrayList.iterator(); localIterator.hasNext();)
+    {
+      localKit = (Kit)localIterator.next();
+      ItemStack localItemStack = localKit.logo.clone();
+      
+      addLore(localItemStack, "");
+      if (localKit.buyable) {
+        addLore(localItemStack, ChatColor.GOLD + "Price" + ChatColor.YELLOW + ": " + localKit.price);
+      } else {
+        addLore(localItemStack, ChatColor.GREEN + "Free");
+      }
+      addLore(localItemStack, "");
+      addLore(localItemStack, ChatColor.LIGHT_PURPLE + "Requires a permission");
+      
+      this.vipKitsInventory.setItem(53, this.back);
+      this.vipKitsInventory.setItem(localKit.position, localItemStack);
+    }
+  }
+  
+  public void loadKitShop()
+  {
+    this.kitsShopInventory = null;
+    ArrayList localArrayList = new ArrayList();
+    Kit localKit;
+    label59:
+    for (Iterator localIterator = this.kits.values().iterator(); localIterator.hasNext(); localArrayList.add(localKit))
+    {
+      localKit = (Kit)localIterator.next();
+      if ((!localKit.buyable) || (localKit.permission)) {
+        break label59;
+      }
+    }
+    if (localArrayList.isEmpty()) {
+      return;
+    }
+    this.kitsShopInventory = Bukkit.createInventory(null, 54, ChatColor.RED + "Purchase a new kit!");
+    for (localIterator = localArrayList.iterator(); localIterator.hasNext();)
+    {
+      localKit = (Kit)localIterator.next();
+      ItemStack localItemStack = localKit.logo.clone();
+      addLore(localItemStack, "");
+      addLore(localItemStack, ChatColor.GOLD + "Price" + ChatColor.YELLOW + ": " + localKit.price);
+      this.kitsShopInventory.setItem(localKit.position, localItemStack);
+    }
+    this.kitsShopInventory.setItem(53, this.back);
+  }
+  
+  public void loadSponsorGui()
+  {
+    FileConfiguration localFileConfiguration = this.filesManager.SponsorConfig;
+    this.categories = Bukkit.createInventory(null, 18, ChatColor.AQUA + "Select a category");
+    this.categorieItems.clear();
+    if (localFileConfiguration.getConfigurationSection("Categories") != null)
+    {
+      for (String str1 : localFileConfiguration.getConfigurationSection("Categories").getKeys(false))
+      {
+        String[] arrayOfString1 = localFileConfiguration.getString("Categories." + str1 + ".item").split(" : ");
+        ItemStack localItemStack1 = setName(new ItemStack(Material.getMaterial(Integer.valueOf(arrayOfString1[0]).intValue())), ChatColor.GREEN + str1);
+        addLore(localItemStack1, ChatColor.GOLD + "Click to select!");
+        int i = 1;
+        while (i < arrayOfString1.length)
+        {
+          if (arrayOfString1[i].split(":")[0].equalsIgnoreCase("enchant")) {
+            localItemStack1.addUnsafeEnchantment(Enchantment.getByName(arrayOfString1[i].split(":")[1]), Integer.valueOf(arrayOfString1[i].split(":")[2]).intValue());
+          }
+          i++;
+        }
+        this.categories.addItem(new ItemStack[] { localItemStack1 });
+        
+        Inventory localInventory = Bukkit.createInventory(null, 36, ChatColor.GOLD + "Sponsor: " + ChatColor.GREEN + str1);
+        for (String str2 : localFileConfiguration.getStringList("Categories." + str1 + ".items"))
+        {
+          String[] arrayOfString2 = str2.split(" : ");
+          ItemStack localItemStack2 = this.filesManager.getItemStackFromString(arrayOfString2, 3, true);
+          addLore(localItemStack2, ChatColor.GOLD + "Costs: " + ChatColor.AQUA + arrayOfString2[2] + ChatColor.GOLD + " coins!");
+          localInventory.addItem(new ItemStack[] { localItemStack2 });
+          this.categoriePurchases.put(localItemStack2, Integer.valueOf(arrayOfString2[2]));
+        }
+        localInventory.setItem(localInventory.getSize() - 1, this.back);
+        this.categorieItems.put(Integer.valueOf(localItemStack1.getTypeId()), localInventory);
+      }
+      this.categories.setItem(this.categories.getSize() - 1, this.back);
+    }
+  }
+  
+  public void loadChestItems(FileConfiguration paramFileConfiguration, ArrayList<ItemStack>... paramVarArgs)
+  {
+    if (paramVarArgs.length < 3) {
+      return;
+    }
+    HashMap localHashMap = new HashMap();
+    localHashMap.put("Items", paramVarArgs[0]);
+    localHashMap.put("Tier-2-Items", paramVarArgs[1]);
+    localHashMap.put("Carepackage", paramVarArgs[2]);
+    Iterator localIterator2;
+    for (Iterator localIterator1 = localHashMap.keySet().iterator(); localIterator1.hasNext(); localIterator2.hasNext())
+    {
+      String str1 = (String)localIterator1.next();
+      ((ArrayList)localHashMap.get(str1)).clear();
+      localIterator2 = paramFileConfiguration.getStringList(str1).iterator(); continue;String str2 = (String)localIterator2.next();
+      try
+      {
+        ItemStack localItemStack = this.filesManager.getItemStackFromString(str2.split(" : "), 2, true);
+        ((ArrayList)localHashMap.get(str1)).add(localItemStack);
+      }
+      catch (Exception localException)
+      {
+        localException.printStackTrace();
+        this.logger.info("[SurvivalGames] There was a problem while loading an item from chest.yml at the section '" + str1 + "', its at the line: " + str2);
+      }
+    }
+  }
+  
+  int totalUpdates = 0;
+  long nextUpdate;
+  
+  public boolean fixUpdater()
+  {
+    FileConfiguration localFileConfiguration = this.filesManager.SignsConfig;
+    if ((localFileConfiguration.getConfigurationSection("Signs.Top") == null) || (localFileConfiguration.getConfigurationSection("Signs.Top").getKeys(false).isEmpty()))
+    {
+      if (this.Updater != null) {
+        this.Updater.cancel();
+      }
+      this.Updater = null;
+      this.nextUpdate = 0L;
+      return false;
+    }
+    if (this.Updater != null) {
+      return false;
+    }
+    this.logger.info("[SurvivalGames] Top signs updater is about to start!");
+    this.Updater = new BukkitRunnable()
+    {
+      public void run()
+      {
+        main.this.totalUpdates += 1;
+        main.this.nextUpdate = (System.currentTimeMillis() + main.this.config.LoadTopLeadersMinutes * 60000);
+        main.this.logger.info("[SurvivalGames] Updating top signs!");
+        final FileConfiguration localFileConfiguration = main.this.filesManager.SignsConfig;
+        SurvivalGamesAPI.StatType[] arrayOfStatType;
+        int j = (arrayOfStatType = SurvivalGamesAPI.StatType.values()).length;
+        for (int i = 0; i < j; i++)
+        {
+          final SurvivalGamesAPI.StatType localStatType = arrayOfStatType[i];
+          final String str = "Signs.Top." + localStatType.name();
+          if (localFileConfiguration.getConfigurationSection(str) != null)
+          {
+            int k = 0;
+            final Object localObject;
+            for (Iterator localIterator = localFileConfiguration.getConfigurationSection(str).getKeys(false).iterator(); localIterator.hasNext();)
+            {
+              localObject = (String)localIterator.next();
+              int m = Integer.valueOf((String)localObject).intValue();
+              if (m > k) {
+                k = m;
+              }
+            }
+            if (k > 0) {
+              try
+              {
+                localObject = SurvivalGamesAPI.getTopPlayers(localStatType, k);
+                
+                new BukkitRunnable()
+                {
+                  public void run()
+                  {
+                    for (String str1 : localFileConfiguration.getConfigurationSection(str).getKeys(false))
+                    {
+                      String str2 = "Signs.Top." + localStatType.name() + "." + str1;
+                      World localWorld = Bukkit.getWorld(localFileConfiguration.getString(str2 + ".world"));
+                      int i = localFileConfiguration.getInt(str2 + ".x");int j = localFileConfiguration.getInt(str2 + ".y");int k = localFileConfiguration.getInt(str2 + ".z");
+                      
+                      Block localBlock1 = localWorld.getBlockAt(i, j, k);
+                      if ((localBlock1 != null) && ((localBlock1.getType().equals(Material.SIGN)) || (localBlock1.getType().equals(Material.SIGN_POST)) || (localBlock1.getType().equals(Material.WALL_SIGN))))
+                      {
+                        org.bukkit.block.Sign localSign = (org.bukkit.block.Sign)localBlock1.getState();
+                        if ((localSign.getLine(0).equals(main.this.signsprefix)) && (localSign.getLine(1).startsWith("Top")) && 
+                          (main.this.isNumber(localSign.getLine(2).replace("#", "").split(" ")[0])))
+                        {
+                          String str3 = (String)((Map.Entry)localObject.get(Integer.valueOf(str1).intValue() - 1)).getKey();
+                          if (str3.contains("NO_PLAYER")) {
+                            str3 = "NO_PLAYER";
+                          }
+                          localSign.setLine(2, "#" + str1 + " " + str3);
+                          localSign.setLine(3, "(" + ((Map.Entry)localObject.get(Integer.valueOf(str1).intValue() - 1)).getValue() + ")");
+                          localSign.update(true);
+                          if (str3.equals("NO_PLAYER")) {
+                            str3 = "MHF_Question";
+                          }
+                          Block localBlock2 = null;
+                          Location localLocation = localSign.getLocation().add(0.0D, 1.0D, 0.0D);
+                          Object localObject;
+                          if (localLocation.getBlock().getType().equals(Material.SKULL))
+                          {
+                            localBlock2 = localLocation.getBlock();
+                          }
+                          else
+                          {
+                            localObject = ((org.bukkit.material.Sign)localSign.getData()).getFacing();
+                            if (((BlockFace)localObject).equals(BlockFace.WEST)) {
+                              localLocation.add(1.0D, 0.0D, 0.0D);
+                            }
+                            if (((BlockFace)localObject).equals(BlockFace.SOUTH)) {
+                              localLocation.add(0.0D, 0.0D, -1.0D);
+                            }
+                            if (((BlockFace)localObject).equals(BlockFace.EAST)) {
+                              localLocation.add(-1.0D, 0.0D, 0.0D);
+                            }
+                            if (((BlockFace)localObject).equals(BlockFace.NORTH)) {
+                              localLocation.add(0.0D, 0.0D, 1.0D);
+                            }
+                            if (localLocation.getBlock().getType().equals(Material.SKULL)) {
+                              localBlock2 = localLocation.getBlock();
+                            }
+                          }
+                          if (localBlock2 != null)
+                          {
+                            localObject = (Skull)localBlock2.getState();
+                            ((Skull)localObject).setSkullType(SkullType.PLAYER);
+                            ((Skull)localObject).setOwner(str3);
+                            ((Skull)localObject).update();
+                          }
+                        }
+                      }
+                    }
+                  }
+                }.runTask(main.plugin);
+              }
+              catch (SQLException localSQLException)
+              {
+                localSQLException.printStackTrace();
+              }
+            }
+          }
+        }
+      }
+    }.runTaskTimerAsynchronously(this, 0L, this.config.LoadTopLeadersMinutes * 1200);
+    this.logger.info("[SurvivalGames] Top signs updater has started!");
+    return true;
+  }
+  
+  public void sendAchievement(final Player paramPlayer, String paramString1, String paramString2, int paramInt)
+  {
+    PlayerData localPlayerData = (PlayerData)this.playerData.get(paramPlayer.getName());
+    int i = paramInt * localPlayerData.modifier;
+    localPlayerData.addCoins(paramPlayer, i, true);
+    
+    ChatColor localChatColor = ChatColor.values()[this.random.nextInt(16)];
+    paramPlayer.sendMessage(localChatColor + "    " + ChatColor.STRIKETHROUGH + "----------" + ChatColor.DARK_RED + ChatColor.MAGIC + " AA" + ChatColor.YELLOW + " Achievement unlocked " + ChatColor.DARK_RED + ChatColor.MAGIC + "AA " + localChatColor + ChatColor.STRIKETHROUGH + "----------");
+    paramPlayer.sendMessage(" ");
+    paramPlayer.sendMessage("                                     " + ChatColor.GOLD + paramString1);
+    paramPlayer.sendMessage(" ");
+    paramPlayer.sendMessage("                                    " + ChatColor.GREEN + paramString2);
+    paramPlayer.sendMessage("                                    " + ChatColor.GREEN + "Congratulations!");
+    paramPlayer.sendMessage("                                       " + ChatColor.LIGHT_PURPLE + "+ " + paramInt + " coins " + (localPlayerData.modifier != 1 ? "(x" + localPlayerData.modifier + ")" : ""));
+    paramPlayer.sendMessage(" ");
+    paramPlayer.sendMessage(localChatColor + "    " + ChatColor.STRIKETHROUGH + "--------------------------------------------");
+    paramPlayer.playSound(paramPlayer.getLocation(), this.NOTE_PLING, 1.0F, 1.0F);
+    paramPlayer.playSound(paramPlayer.getLocation(), this.FIREWORK_LAUNCH, 1.0F, 1.0F);
+    if (this.title_achievement != null) {
+      this.title_achievement.send(paramPlayer);
+    }
+    new BukkitRunnable()
+    {
+      int x = 0;
+      
+      public void run()
+      {
+        if (this.x == 7) {
+          cancel();
+        }
+        if (paramPlayer != null) {
+          paramPlayer.playSound(paramPlayer.getLocation(), main.this.FIREWORK_TWINKLE, 1.0F, 1.0F);
+        }
+        this.x += 1;
+      }
+    }.runTaskTimer(this, 0L, 5L);
+  }
+  
+  public void setupAll()
+  {
+    loadChestItems(this.filesManager.ChestConfig, new ArrayList[] { this.randomItems, this.tier2Items, this.carepackageItems });
+    registerCommands();
+    
+    final FileConfiguration localFileConfiguration = getConfig();
+    try
+    {
+      this.shop = (this.config.ShopEnabled ? setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Shop-Item-Stack"))), localFileConfiguration.getString("Shop-Item-Stack-Name").replaceAll("&", "�")) : new ItemStack(Material.AIR));
+      this.ikits = (this.config.KitsEnabled ? setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Kits-Item-Stack"))), localFileConfiguration.getString("Kits-Item-Stack-Name").replaceAll("&", "�")) : new ItemStack(Material.AIR));
+      this.bounty = (this.config.BountyEnabled ? setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Bounty-Item-Stack"))), localFileConfiguration.getString("Bounty-Item-Stack-Name").replaceAll("&", "�")) : new ItemStack(Material.AIR));
+      this.leave = (this.config.LobbyLeaveItem ? setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Leave-Item-Stack"))), localFileConfiguration.getString("Leave-Item-Stack-Name").replaceAll("&", "�")) : new ItemStack(Material.AIR));
+      this.vote = (this.config.BungeeMode ? setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Voting-Item-Stack"))), localFileConfiguration.getString("Voting-Item-Stack-Name").replaceAll("&", "�")) : new ItemStack(Material.AIR));
+      this.back = setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Back-Item-Stack"))), localFileConfiguration.getString("Back-Item-Stack-Name").replaceAll("&", "�"));
+      this.sponsor = (this.config.SponserEnabled ? setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Sponsor-Item-Stack"))), localFileConfiguration.getString("Sponsor-Item-Stack-Name").replaceAll("&", "�")) : new ItemStack(Material.AIR));
+    }
+    catch (Exception localException1)
+    {
+      this.logger.info("[SurvivalGames] An error has occured while loading an Item from config.yml! please make sure you are creating the Items correctly!");
+      localException1.printStackTrace();
+    }
+    if (this.config.SponserEnabled) {
+      loadSponsorGui();
+    }
+    this.kitsInventory = null;
+    if (this.config.KitsEnabled)
+    {
+      this.kitsInventory = Bukkit.createInventory(null, 9, this.config.KitsInventoryName);
+      try
+      {
+        for (int i = 0; i < 9; i++) {
+          this.kitsInventory.setItem(i, setName(new ItemStack(Material.STAINED_GLASS_PANE, 1, (short)7), ChatColor.GRAY + "Locked"));
+        }
+        this.mykits = setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Kit-Menu-OwnedKits-Item"))), localFileConfiguration.getString("Kit-Menu-OwnedKits-Name").replaceAll("&", "�"));
+        this.kitsInventory.setItem(2, this.mykits);
+        this.purchase = setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Kit-Menu-PurchaseableKits-Item"))), localFileConfiguration.getString("Kit-Menu-PurchaseableKits-Name").replaceAll("&", "�"));
+        this.kitsInventory.setItem(4, this.purchase);
+        this.vip = setName(new ItemStack(Material.getMaterial(localFileConfiguration.getInt("Kit-Menu-VipKits-Item"))), localFileConfiguration.getString("Kit-Menu-VipKits-Name").replaceAll("&", "�"));
+        this.kitsInventory.setItem(6, this.vip);
+      }
+      catch (Exception localException2)
+      {
+        this.logger.info("[SurvivalGames] An error has occured while loading items into the kit menu! make sure you are creating the items correctly in config.yml");
+        localException2.printStackTrace();
+      }
+      loadKits();
+      loadVipKits();
+      loadKitShop();
+    }
+    this.shopInventory = null;
+    if (this.config.ShopEnabled)
+    {
+      this.shopInventory = Bukkit.createInventory(null, this.config.ShopInventorySize, this.config.ShopInventoryName);
+      loadItemsIntoShopInventory();
+    }
+    this.bountyInventory = null;
+    if (this.config.BountyEnabled) {
+      loadBountyInventory();
+    }
+    if (this.config.GiveBook)
+    {
+      BookMeta localBookMeta = (BookMeta)this.book.getItemMeta();
+      localBookMeta.addPage(new String[] { ChatColor.DARK_RED + ChatColor.BOLD + "  SurvivalGames  \n \n" + ChatColor.DARK_BLUE + "Game Objective: \n" + ChatColor.BLACK + "SurvivalGames is a fun pvp game about finding chests and trying to kill your enemies, you have to get as much loot as you can! Remember last man standing wins \n " + ChatColor.DARK_RED + "Turn The Page Over!" });
+      localBookMeta.addPage(new String[] { ChatColor.DARK_BLUE + "Kits: \n " + ChatColor.BLACK + "Kits are a useful tool in the game, it gives you extra items at the begin to eliminate your enemies quicker and survive longer! \n " + ChatColor.DARK_RED + "Turn The Page Over!" });
+      localBookMeta.addPage(new String[] { ChatColor.DARK_BLUE + "DeathMatch: \n " + ChatColor.BLACK + "You are not allowed to take the game for ever, so you are limited with time, and at somepoint you are gonna be teleported to a place were you have to fight and cant escape! \n " + ChatColor.DARK_RED + "Turn The Page Over!" });
+      localBookMeta.addPage(new String[] { ChatColor.DARK_BLUE + "Coins: \n " + ChatColor.BLACK + "Coins can be earned by killing players or winning games, coins are very helpful buying extra items that will help you win, to check your coins use /sg stats \n and to spend them use /sg shop \n " + ChatColor.DARK_RED + "Turn The Page Over!" });
+      localBookMeta.addPage(new String[] { ChatColor.DARK_BLUE + "Info: \n \n" + ChatColor.BLACK + "Plugin made by: " + ChatColor.DARK_RED + " Wazup92 \n \n" + ChatColor.DARK_BLUE + "Description: \n" + ChatColor.BLACK + "Amazing plugin with various different good features, its one of the best SurvivalGames plugins out there!" });
+      localBookMeta.setAuthor(ChatColor.AQUA + "Wazup92");
+      localBookMeta.setTitle(ChatColor.BOLD + "SurvivalGames");
+      this.book.setItemMeta(localBookMeta);
+    }
+    fixUpdater();
+    if (this.config.useVault)
+    {
+      setupEconomy();
+      if (this.econ == null) {
+        this.logger.info("[SurvivalGames] Couldn't find vault! Using coins system instead!");
+      }
+    }
+    Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Runnable()
+    {
+      public void run()
+      {
+        if (Bukkit.getPluginManager().getPlugin("TitleManager") != null)
+        {
+          main.this.logger.info("[SurvivalGames] Found TitleManager! Loading all the titles...");
+          
+          main.this.fadeIn = localFileConfiguration.getInt("Titles.fadeIn");
+          main.this.stayTime = localFileConfiguration.getInt("Titles.stayTime");
+          main.this.fadeOut = localFileConfiguration.getInt("Titles.fadeOut");
+          if (localFileConfiguration.getBoolean("Titles.join.enabled")) {
+            main.this.title_join = new TitleObject(ChatColor.translateAlternateColorCodes('&', localFileConfiguration.getString("Titles.join.text")), TitleObject.TitleType.TITLE).setFadeIn(main.this.fadeIn).setStay(main.this.stayTime).setFadeOut(main.this.fadeOut);
+          }
+          if (localFileConfiguration.getBoolean("Titles.leave.enabled")) {
+            main.this.title_leave = new TitleObject(ChatColor.translateAlternateColorCodes('&', localFileConfiguration.getString("Titles.leave.text")), TitleObject.TitleType.TITLE).setFadeIn(main.this.fadeIn).setStay(main.this.stayTime).setFadeOut(main.this.fadeOut);
+          }
+          if (localFileConfiguration.getBoolean("Titles.starting.enabled"))
+          {
+            main.this.title_starting = true;
+            main.this.title_starting_text = ChatColor.translateAlternateColorCodes('&', localFileConfiguration.getString("Titles.starting.text"));
+          }
+          if (localFileConfiguration.getBoolean("Titles.start.enabled")) {
+            main.this.title_start = new TitleObject(ChatColor.translateAlternateColorCodes('&', localFileConfiguration.getString("Titles.start.text")), TitleObject.TitleType.TITLE).setFadeIn(main.this.fadeIn).setStay(main.this.stayTime).setFadeOut(main.this.fadeOut);
+          }
+          if (localFileConfiguration.getBoolean("Titles.win.enabled")) {
+            main.this.title_win = new TitleObject(ChatColor.translateAlternateColorCodes('&', localFileConfiguration.getString("Titles.win.text")), TitleObject.TitleType.TITLE).setFadeIn(main.this.fadeIn).setStay(main.this.stayTime).setFadeOut(main.this.fadeOut);
+          }
+          if (localFileConfiguration.getBoolean("Titles.death.enabled"))
+          {
+            main.this.title_death = true;
+            main.this.title_death_text = ChatColor.translateAlternateColorCodes('&', localFileConfiguration.getString("Titles.death.text"));
+          }
+          if (localFileConfiguration.getBoolean("Titles.achievement.enabled")) {
+            main.this.title_win = new TitleObject(ChatColor.translateAlternateColorCodes('&', localFileConfiguration.getString("Titles.achievement.text")), TitleObject.TitleType.TITLE).setFadeIn(main.this.fadeIn).setStay(main.this.stayTime).setFadeOut(main.this.fadeOut);
+          }
+          main.this.logger.info("[SurvivalGames] Done loading titles!");
+        }
+        else
+        {
+          main.this.logger.info("[SurvivalGames] Couldn't find TitleManager, none of the titles will be loaded!");
+        }
+      }
+    }, localFileConfiguration.getInt("Titles.load-delay"));
+    if (localFileConfiguration.contains("Global-Lobby")) {
+      Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Runnable()
+      {
+        public void run()
+        {
+          String str = localFileConfiguration.getString("Global-Lobby.world");
+          int i = localFileConfiguration.getInt("Global-Lobby.x");
+          int j = localFileConfiguration.getInt("Global-Lobby.y");
+          int k = localFileConfiguration.getInt("Global-Lobby.z");
+          int m = localFileConfiguration.getInt("Global-Lobby.yaw");
+          int n = localFileConfiguration.getInt("Global-Lobby.pitch");
+          main.this.globallobby = new Location(Bukkit.getWorld(str), i, j, k, m, n);
+        }
+      }, localFileConfiguration.getInt("Load-Global-Lobby-Delay"));
+    }
+    if ((this.config.BungeeMode) && (localFileConfiguration.contains("Global-Deathmatch"))) {
+      Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Runnable()
+      {
+        public void run()
+        {
+          main.this.restoreGlobalDeathmatch();
+        }
+      }, localFileConfiguration.getInt("Load-Global-Deathmatch-Delay"));
+    }
+    this.map = null;
+    if (this.config.GiveWinnerMap)
+    {
+      this.logger.info("[SurvivalGames] Creating winners map...");
+      new BukkitRunnable()
+      {
+        public void run()
+        {
+          MapView localMapView = Bukkit.createMap((World)Bukkit.getWorlds().get(0));
+          final MapRenderer localMapRenderer;
+          for (Iterator localIterator = localMapView.getRenderers().iterator(); localIterator.hasNext();)
+          {
+            localMapRenderer = (MapRenderer)localIterator.next();
+            localMapView.removeRenderer(localMapRenderer);
+          }
+          try
+          {
+            localMapRenderer = main.this.config.DisplayImageOnWinnerMap ? ImageIO.read(main.this.config.ImageURL).getScaledInstance(64, 64, 2) : null;
+            localMapView.addRenderer(new MapRenderer()
+            {
+              public void render(MapView paramAnonymous2MapView, MapCanvas paramAnonymous2MapCanvas, Player paramAnonymous2Player)
+              {
+                paramAnonymous2MapCanvas.drawText(25, 10, MinecraftFont.Font, "Congratulations");
+                paramAnonymous2MapCanvas.drawText(35, 20, MinecraftFont.Font, "For winning!");
+                if (localMapRenderer != null) {
+                  paramAnonymous2MapCanvas.drawImage(35, 50, localMapRenderer);
+                }
+              }
+            });
+          }
+          catch (IOException localIOException)
+          {
+            localIOException.printStackTrace();
+          }
+          main.this.map = new ItemStack(Material.MAP, 1, localMapView.getId());
+        }
+      }.runTaskAsynchronously(this);
+      this.logger.info("[SurvivalGames] Created the winners map!");
+    }
+    if (localFileConfiguration.getBoolean("Check-For-Updates")) {
+      new BukkitRunnable()
+      {
+        public void run()
+        {
+          try
+          {
+            HttpURLConnection localHttpURLConnection = (HttpURLConnection)new URL("http://www.spigotmc.org/api/general.php").openConnection();
+            localHttpURLConnection.setDoOutput(true);
+            localHttpURLConnection.setRequestMethod("POST");
+            localHttpURLConnection.getOutputStream().write("key=98BE0FE67F88AB82B4C197FAF1DC3B69206EFDCC4D3B80FC83A00037510B99B4&resource=1351".getBytes("UTF-8"));
+            main.this.onlineVersion = Double.valueOf(new BufferedReader(new InputStreamReader(localHttpURLConnection.getInputStream())).readLine()).doubleValue();
+            main.this.availableUpdate = (main.this.onlineVersion > Double.valueOf(main.this.getDescription().getVersion()).doubleValue());
+            String str;
+            if (main.this.availableUpdate) {
+              str = main.this.msgs.sgprefix + "Found a new available version! " + main.this.onlineVersion + " download at https://www.spigotmc.org/resources/survivalgames.1351/";
+            } else {
+              str = main.this.msgs.sgprefix + "Looks like you have the latest version!";
+            }
+            Bukkit.getConsoleSender().sendMessage(str);
+            for (Player localPlayer : main.this.getOnlinePlayers()) {
+              if (localPlayer.hasPermission("sg.admin")) {
+                localPlayer.sendMessage(str);
+              }
+            }
+          }
+          catch (IOException localIOException)
+          {
+            localIOException.printStackTrace();
+          }
+        }
+      }.runTaskAsynchronously(this);
+    }
+  }
+  
+  public void restoreGlobalDeathmatch()
+  {
+    FileConfiguration localFileConfiguration = getConfig();
+    final String str = localFileConfiguration.getString("Global-Deathmatch.world");
+    int i = localFileConfiguration.getInt("Global-Deathmatch.x");
+    int j = localFileConfiguration.getInt("Global-Deathmatch.y");
+    int k = localFileConfiguration.getInt("Global-Deathmatch.z");
+    int m = localFileConfiguration.getInt("Global-Deathmatch.yaw");
+    int n = localFileConfiguration.getInt("Global-Deathmatch.pitch");
+    Bukkit.createWorld(new WorldCreator(str));
+    this.globaldeathmatch = new Location(Bukkit.getWorld(str), i, j, k, m, n);
+    clearEntities(this.globaldeathmatch.getWorld());
+    if (this.config.AdvancedRollback)
+    {
+      if (!Bukkit.getWorld(str).getPlayers().isEmpty())
+      {
+        this.logger.info("[SurvivalGames] The global deathmatch world contains players, which disables the rollback. attempting to move these players to the main world!");
+        World localWorld = Bukkit.getWorld(plugin.config.MainWorld);
+        if (localWorld == null)
+        {
+          this.logger.info("[SurvivalGames] Main world is unloaded or not set correctly, due to that the global deathmatch will not rollback, please check config.yml and make sure the correct Main world is set");
+          return;
+        }
+        for (Player localPlayer : Bukkit.getWorld(str).getPlayers()) {
+          localPlayer.teleport(localWorld.getSpawnLocation());
+        }
+        if (Bukkit.getWorld(str).getPlayers().isEmpty())
+        {
+          this.logger.info("[SurvivalGames] World have been cleared and is ready to rollback!");
+        }
+        else
+        {
+          this.logger.info("[SurvivalGames] Plugin attempted to move players, but it seems like there are still players there, rollback will be stopped");
+          return;
+        }
+      }
+      new BukkitRunnable()
+      {
+        public void run()
+        {
+          final long l = System.currentTimeMillis();
+          File localFile = Bukkit.getWorld(str).getWorldFolder();
+          final World.Environment localEnvironment = Bukkit.getWorld(str).getEnvironment();
+          Bukkit.unloadWorld(str, false);
+          main.this.filesManager.deleteWorld(localFile);
+          main.this.filesManager.copyWorld(new File(main.this.getDataFolder(), "Global-Deathmatch"), localFile);
+          new BukkitRunnable()
+          {
+            public void run()
+            {
+              Bukkit.createWorld(new WorldCreator(this.val$world).environment(localEnvironment));
+              main.this.logger.info("[SurvivalGames] The global deathmatch world has been restored sucessfully! took " + (System.currentTimeMillis() - l) + "ms");
+              Location localLocation = main.this.globaldeathmatch;
+              main.this.globaldeathmatch = new Location(Bukkit.getWorld(this.val$world), localLocation.getX(), localLocation.getY(), localLocation.getZ(), localLocation.getYaw(), localLocation.getPitch());
+            }
+          }.runTask(main.plugin);
+        }
+      }.runTaskAsynchronously(plugin);
+    }
+  }
+  
+  public void clearEntities(World paramWorld)
+  {
+    for (Entity localEntity : paramWorld.getEntities()) {
+      if ((this.config.ClearEntitiesOnGameEnd) && (!(localEntity instanceof Player))) {
+        localEntity.remove();
+      } else if ((localEntity instanceof Item)) {
+        localEntity.remove();
+      }
+    }
+  }
+  
+  public List<Player> getOnlinePlayers()
+  {
+    ArrayList localArrayList = Lists.newArrayList();
+    for (World localWorld : Bukkit.getWorlds()) {
+      localArrayList.addAll(localWorld.getPlayers());
+    }
+    return Collections.unmodifiableList(localArrayList);
+  }
+  
+  public void loadSounds()
+  {
+    if (this.U_1_9)
+    {
+      this.NOTE_PLING = Sound.valueOf("BLOCK_NOTE_PLING");
+      this.FIREWORK_LAUNCH = Sound.valueOf("ENTITY_FIREWORK_LAUNCH");
+      this.FIREWORK_TWINKLE = Sound.valueOf("ENTITY_FIREWORK_TWINKLE");
+      this.FIREWORK_BLAST = Sound.valueOf("ENTITY_FIREWORK_BLAST");
+      this.FIREWORK_LARGE_BLAST = Sound.valueOf("ENTITY_FIREWORK_LARGE_BLAST");
+      this.EXPLODE = Sound.valueOf("ENTITY_GENERIC_EXPLODE");
+      this.CREEPER_HISS = Sound.valueOf("ENTITY_CREEPER_DEATH");
+      this.LEVEL_UP = Sound.valueOf("ENTITY_PLAYER_LEVELUP");
+    }
+    else
+    {
+      this.NOTE_PLING = Sound.valueOf("NOTE_PLING");
+      this.FIREWORK_LAUNCH = Sound.valueOf("FIREWORK_LAUNCH");
+      this.FIREWORK_TWINKLE = Sound.valueOf("FIREWORK_TWINKLE");
+      this.FIREWORK_BLAST = Sound.valueOf("FIREWORK_BLAST");
+      this.FIREWORK_LARGE_BLAST = Sound.valueOf("FIREWORK_LARGE_BLAST");
+      this.EXPLODE = Sound.valueOf("EXPLODE");
+      this.CREEPER_HISS = Sound.valueOf("CREEPER_HISS");
+      this.LEVEL_UP = Sound.valueOf("LEVEL_UP");
+    }
+  }
+  
+  public void registerCommands()
+  {
+    this.commands.clear();
+    this.commands.addAll(Arrays.asList(new String[] { "list", "stats", "coins", "setgloballobby", "lobby", "admin", "info", "pastebin", "start", "setmodifier", "reset", "kit", "setglobaldeathmatch", "worldmanager" }));
+    if (!this.config.BungeeMode) {
+      this.commands.addAll(Arrays.asList(new String[] { "enable", "disable", "create", "delete", "addspawn", "removespawn", "join", "leave", "adddeathmatch", "removedeathmatch", "stop", "reload", "edit" }));
+    } else {
+      this.commands.addAll(Arrays.asList(new String[] { "vote" }));
+    }
+  }
+}
